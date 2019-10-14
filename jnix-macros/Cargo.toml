@@ -1,0 +1,13 @@
+[package]
+name = "jnix-macros"
+version = "0.1.0"
+authors = ["Mullvad VPN <admin@mullvad.net>"]
+keywords = ["ffi", "java", "jni"]
+categories = ["external-ffi-bindings"]
+repository = "https://github.com/mullvad/jnix"
+edition = "2018"
+
+[lib]
+proc-macro = true
+
+[dependencies]

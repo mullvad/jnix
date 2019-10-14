@@ -1,0 +1,11 @@
+[package]
+name = "jnix"
+version = "0.1.0"
+authors = ["Mullvad VPN <admin@mullvad.net>"]
+keywords = ["ffi", "java", "jni"]
+categories = ["external-ffi-bindings"]
+repository = "https://github.com/mullvad/jnix"
+edition = "2018"
+
+[dependencies]
+jni = "0.14"
