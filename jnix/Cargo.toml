@@ -7,7 +7,11 @@ categories = ["external-ffi-bindings"]
 repository = "https://github.com/mullvad/jnix"
 edition = "2018"
 
+[features]
+derive = ["jnix-macros"]
+
 [dependencies]
 jni = "0.14"
+jnix-macros = { optional = true, path = "../jnix-macros" }
 once_cell = "1"
 parking_lot = "0.9"
