@@ -7,6 +7,7 @@ use syn::{
 };
 
 pub struct ParsedGenerics {
+    type_parameters: Vec<Ident>,
     parameters: Vec<TokenStream>,
     constraints: Vec<TokenStream>,
 }
@@ -18,6 +19,7 @@ impl ParsedGenerics {
         let constraints = Self::collect_constraints(generics);
 
         ParsedGenerics {
+            type_parameters: types,
             parameters,
             constraints,
         }
@@ -77,6 +79,16 @@ impl ParsedGenerics {
             path: parse_str("jnix::IntoJava<'borrow, 'env>")
                 .expect("Invalid syntax in hardcoded string"),
         })
+    }
+
+    pub fn type_parameters(&self) -> TypeParameters {
+        TypeParameters {
+            params: self
+                .type_parameters
+                .iter()
+                .map(|param| param.to_string())
+                .collect(),
+        }
     }
 
     pub fn impl_generics(&self) -> TokenStream {
