@@ -1,8 +1,9 @@
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
-use std::iter;
+use std::{collections::HashSet, iter};
 use syn::{
-    parse_str, Generics, Ident, Lifetime, Token, TraitBound, TraitBoundModifier, TypeParamBound,
+    parse_str, Generics, Ident, Lifetime, Path, ReturnType, Token, TraitBound, TraitBoundModifier,
+    Type, TypeParamBound,
 };
 
 pub struct ParsedGenerics {
@@ -103,5 +104,66 @@ impl ParsedGenerics {
         let constraints = self.constraints.iter();
 
         quote! { where #( #constraints ),* }
+    }
+}
+
+pub struct TypeParameters {
+    params: HashSet<String>,
+}
+
+impl TypeParameters {
+    pub fn is_used_in_type(&self, type_to_check: &Type) -> bool {
+        match type_to_check {
+            Type::Never(_) => false,
+
+            Type::Path(path) => self.contains_path(&path.path),
+
+            Type::Array(array) => self.is_used_in_type(&array.elem),
+            Type::Group(group) => self.is_used_in_type(&group.elem),
+            Type::Paren(paren) => self.is_used_in_type(&paren.elem),
+            Type::Ptr(pointer) => self.is_used_in_type(&pointer.elem),
+            Type::Reference(reference) => self.is_used_in_type(&reference.elem),
+            Type::Slice(slice) => self.is_used_in_type(&slice.elem),
+
+            Type::Tuple(tuple) => tuple.elems.iter().any(|elem| self.is_used_in_type(elem)),
+
+            Type::ImplTrait(impl_trait) => self.is_used_in_bounds(&impl_trait.bounds),
+            Type::TraitObject(trait_object) => self.is_used_in_bounds(&trait_object.bounds),
+
+            Type::BareFn(function) => {
+                let type_parameter_in_input = function
+                    .inputs
+                    .iter()
+                    .any(|input| self.is_used_in_type(&input.ty));
+
+                if type_parameter_in_input {
+                    return true;
+                }
+
+                match &function.output {
+                    ReturnType::Default => false,
+                    ReturnType::Type(_, output) => self.is_used_in_type(&output),
+                }
+            }
+
+            Type::Infer(_) => panic!("Can't check for type parameter before type is inferred"),
+            Type::Macro(_) => panic!("Can't check for type parameter in macro call"),
+            Type::Verbatim(_) => panic!("Can't check for type parameter in unstructured tokens"),
+
+            _ => panic!("Can't check for type parameter in unknown type"),
+        }
+    }
+
+    fn contains_path(&self, path: &Path) -> bool {
+        path.get_ident()
+            .map(|ident| self.params.contains(&ident.to_string()))
+            .unwrap_or(false)
+    }
+
+    fn is_used_in_bounds<'a>(&self, bounds: impl IntoIterator<Item = &'a TypeParamBound>) -> bool {
+        bounds.into_iter().any(|bound| match bound {
+            TypeParamBound::Lifetime(_) => false,
+            TypeParamBound::Trait(bound) => self.contains_path(&bound.path),
+        })
     }
 }
