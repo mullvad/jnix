@@ -1,4 +1,4 @@
-use crate::{JnixAttributes, ParsedFields, ParsedGenerics, ParsedVariants};
+use crate::{JnixAttributes, ParsedFields, ParsedGenerics, ParsedVariants, TypeParameters};
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
 use syn::{Data, DeriveInput, Ident, LitStr};
@@ -45,6 +45,7 @@ impl ParsedType {
             &jni_class_name_literal,
             &type_name_literal,
             &class_name,
+            &self.generics.type_parameters(),
         );
 
         quote! {
@@ -83,17 +84,20 @@ impl TypeData {
         jni_class_name_literal: &LitStr,
         type_name_literal: &LitStr,
         class_name: &str,
+        type_parameters: &TypeParameters,
     ) -> TokenStream {
         match self {
             TypeData::Enum(variants) => variants.generate_enum_into_java(
                 jni_class_name_literal,
                 type_name_literal,
                 class_name,
+                type_parameters,
             ),
             TypeData::Struct(fields) => fields.generate_struct_into_java(
                 jni_class_name_literal,
                 type_name_literal,
                 class_name,
+                type_parameters,
             ),
         }
     }
