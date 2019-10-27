@@ -55,6 +55,18 @@ impl<'env> JnixEnv<'env> {
         }
     }
 
+    /// Loads a class and stores it in the class cache.
+    pub fn preload_classes(&self, class_names: impl IntoIterator<Item = impl Into<String>>) {
+        let mut cache = CLASS_CACHE.lock();
+
+        for class_name in class_names {
+            let class_name = class_name.into();
+            let class = self.load_class(&class_name);
+
+            cache.insert(class_name, class);
+        }
+    }
+
     fn load_class(&self, class_name: impl AsRef<str>) -> GlobalRef {
         let class_name = class_name.as_ref();
         let local_ref = self
