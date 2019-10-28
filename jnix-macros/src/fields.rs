@@ -278,7 +278,11 @@ impl ParsedFields {
                 let converted_binding = field.binding("converted");
                 let conversion = field.preconversion();
 
-                let signature = if type_parameters.is_used_in_type(&field.get_type()) {
+                let signature = if let Some(target) = field.attributes.get_value("target_class") {
+                    let signature = format!("L{};", target.value().replace(".", "/"));
+
+                    quote! { #signature }
+                } else if type_parameters.is_used_in_type(&field.get_type()) {
                     quote! { "Ljava/lang/Object;" }
                 } else {
                     quote! { #converted_binding.jni_signature() }

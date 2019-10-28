@@ -43,6 +43,10 @@ use syn::{parse_macro_input, DeriveInput};
 /// conversion process, and therefore not used as a parameter for the constructor. The
 /// `#[jnix(skip_all)]` attribute can be used on the struct to skip all fields.
 ///
+/// The target class of a specific field can be set manually with the
+/// `#[jnix(target_class = "...")]` attribute. However, be aware that the target class must have
+/// the expected constructor with the parameter list based on the field order of the Rust type.
+///
 /// # Enums
 ///
 /// The generated `IntoJava` implementation for a enum that only has unit variants (i.e., no tuple
