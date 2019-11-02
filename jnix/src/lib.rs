@@ -6,3 +6,7 @@
 //! Rust.
 
 pub extern crate jni;
+
+mod jnix_env;
+
+pub use self::jnix_env::JnixEnv;

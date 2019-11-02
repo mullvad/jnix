@@ -9,3 +9,5 @@ edition = "2018"
 
 [dependencies]
 jni = "0.14"
+once_cell = "1"
+parking_lot = "0.9"
