@@ -7,6 +7,7 @@
 
 pub extern crate jni;
 
+mod as_jvalue;
 mod jnix_env;
 
-pub use self::jnix_env::JnixEnv;
+pub use self::{as_jvalue::AsJValue, jnix_env::JnixEnv};
