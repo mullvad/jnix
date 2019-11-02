@@ -1,4 +1,4 @@
-use jni::objects::JValue;
+use jni::objects::{AutoLocal, JValue};
 
 /// Returns a value as it's [`JValue`] representation.
 ///
@@ -10,4 +10,13 @@ pub trait AsJValue<'env> {
     fn as_jvalue<'borrow>(&'borrow self) -> JValue<'borrow>
     where
         'env: 'borrow;
+}
+
+impl<'env_borrow, 'env: 'env_borrow> AsJValue<'env> for AutoLocal<'env, 'env_borrow> {
+    fn as_jvalue<'borrow>(&'borrow self) -> JValue<'borrow>
+    where
+        'env: 'borrow,
+    {
+        JValue::Object(self.as_obj())
+    }
 }
