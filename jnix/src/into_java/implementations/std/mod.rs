@@ -96,3 +96,20 @@ macro_rules! impl_into_java_for_array {
 }
 
 impl_into_java_for_array!(u8);
+
+impl<'borrow, 'env, T> IntoJava<'borrow, 'env> for Option<T>
+where
+    'env: 'borrow,
+    T: IntoJava<'borrow, 'env, JavaType = AutoLocal<'env, 'borrow>>,
+{
+    const JNI_SIGNATURE: &'static str = T::JNI_SIGNATURE;
+
+    type JavaType = AutoLocal<'env, 'borrow>;
+
+    fn into_java(self, env: &'borrow JnixEnv<'env>) -> Self::JavaType {
+        match self {
+            Some(t) => t.into_java(env),
+            None => env.auto_local(JObject::null()),
+        }
+    }
+}
