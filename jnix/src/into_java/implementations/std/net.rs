@@ -2,8 +2,9 @@ use crate::{AsJValue, IntoJava, JnixEnv};
 use jni::{
     objects::{AutoLocal, JObject, JValue},
     signature::JavaType,
+    sys::jint,
 };
-use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
 
 fn ipvx_addr_into_java<'borrow, 'env: 'borrow>(
     original_octets: &[u8],
@@ -80,5 +81,24 @@ impl<'borrow, 'env: 'borrow> IntoJava<'borrow, 'env> for IpAddr {
             IpAddr::V4(address) => address.into_java(env),
             IpAddr::V6(address) => address.into_java(env),
         }
+    }
+}
+
+impl<'borrow, 'env: 'borrow> IntoJava<'borrow, 'env> for SocketAddr {
+    const JNI_SIGNATURE: &'static str = "Ljava/net/InetSocketAddress;";
+
+    type JavaType = AutoLocal<'env, 'borrow>;
+
+    fn into_java(self, env: &'borrow JnixEnv<'env>) -> Self::JavaType {
+        let ip_address = self.ip().into_java(env);
+        let port = self.port() as jint;
+        let parameters = [JValue::Object(ip_address.as_obj()), JValue::Int(port)];
+
+        let class = env.get_class("java/net/InetSocketAddress");
+        let object = env
+            .new_object(&class, "(Ljava/net/InetAddress;I)V", &parameters)
+            .expect("Failed to convert SocketAddr Rust type into InetSocketAddress Java object");
+
+        env.auto_local(object)
     }
 }
