@@ -7,12 +7,13 @@
 
 extern crate proc_macro;
 
+mod attributes;
+
+use crate::attributes::JnixAttributes;
 use proc_macro::TokenStream;
 use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::quote;
-use syn::{
-    parse_macro_input, Attribute, Data, DeriveInput, Fields, Ident, Lit, LitStr, MetaNameValue,
-};
+use syn::{parse_macro_input, Data, DeriveInput, Fields, LitStr};
 
 /// Derives `IntoJava` for a type.
 ///
@@ -24,9 +25,13 @@ use syn::{
 #[proc_macro_derive(IntoJava, attributes(jnix))]
 pub fn derive_into_java(input: TokenStream) -> TokenStream {
     let parsed_input = parse_macro_input!(input as DeriveInput);
+    let attributes = JnixAttributes::new(&parsed_input.attrs);
     let type_name = parsed_input.ident;
     let type_name_literal = LitStr::new(&type_name.to_string(), Span::call_site());
-    let class_name = parse_java_class_name(&parsed_input.attrs).expect("Missing Java class name");
+    let class_name = attributes
+        .get_value("class_name")
+        .expect("Missing Java class name")
+        .value();
     let jni_class_name = class_name.replace(".", "/");
     let jni_class_name_literal = LitStr::new(&jni_class_name, Span::call_site());
 
@@ -68,27 +73,6 @@ pub fn derive_into_java(input: TokenStream) -> TokenStream {
     };
 
     TokenStream::from(tokens)
-}
-
-fn parse_java_class_name(attributes: &Vec<Attribute>) -> Option<String> {
-    let jnix_ident = Ident::new("jnix", Span::call_site());
-    let jnix_attribute = attributes
-        .iter()
-        .find(|attribute| attribute.path.is_ident(&jnix_ident))?;
-    let meta: MetaNameValue = jnix_attribute.parse_args().expect("Invalid jnix attribute");
-
-    if meta
-        .path
-        .is_ident(&Ident::new("class_name", Span::call_site()))
-    {
-        if let Lit::Str(class_name) = meta.lit {
-            Some(class_name.value())
-        } else {
-            None
-        }
-    } else {
-        None
-    }
 }
 
 fn extract_struct_fields(data: Data) -> Fields {
