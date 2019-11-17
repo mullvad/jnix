@@ -23,6 +23,10 @@ use syn::{parse_macro_input, Data, DeriveInput, Fields, LitStr};
 /// the converted field values as parameters. Note that the field order is used as the constructor
 /// parameter order.
 ///
+/// Fields can be "preconverted" to a different Rust type, so that the resulting type is then used
+/// to convert to the Java type. To do so, use the `#[jnix(map = "|value| ...")]` attribute with a
+/// conversion closure.
+///
 /// The name of the target Java class must be specified using an attribute, like so:
 /// `#[jnix(class_name = "my.package.MyClass"]`.
 #[proc_macro_derive(IntoJava, attributes(jnix))]

@@ -1,7 +1,7 @@
 use crate::JnixAttributes;
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
-use syn::{spanned::Spanned, Field, Fields, Ident, Index, LitStr, Member};
+use syn::{parse_str, spanned::Spanned, ExprClosure, Field, Fields, Ident, Index, LitStr, Member};
 
 pub struct ParsedField {
     pub name: String,
@@ -53,6 +53,20 @@ impl ParsedField {
 
     pub fn binding(&self, prefix: &str) -> Ident {
         Ident::new(&format!("_{}_{}", prefix, self.name), self.span)
+    }
+
+    pub fn preconversion(&self) -> TokenStream {
+        let source = &self.source_binding;
+
+        match self.attributes.get_value("map") {
+            Some(closure_string_literal) => {
+                let closure: ExprClosure = parse_str(&closure_string_literal.value())
+                    .expect("Invalid closure syntax in jnix(map = ...) attribute");
+
+                quote! { (#closure)(#source) }
+            }
+            None => quote! { #source },
+        }
     }
 }
 
@@ -154,11 +168,13 @@ impl ParsedFields {
             .iter()
             .zip(signature_bindings.iter().zip(final_bindings.iter()))
             .map(|(field, (signature_binding, final_binding))| {
-                let source_binding = &field.source_binding;
+                let converted_binding = field.binding("converted");
+                let conversion = field.preconversion();
 
                 quote! {
-                    let #signature_binding = #source_binding.jni_signature();
-                    let #final_binding = #source_binding.into_java(env);
+                    let #converted_binding = #conversion;
+                    let #signature_binding = #converted_binding.jni_signature();
+                    let #final_binding = #converted_binding.into_java(env);
                 }
             })
     }
