@@ -36,22 +36,30 @@ impl ParsedField {
     }
 
     pub fn from_named_field(field: Field) -> Option<Self> {
-        let attributes = JnixAttributes::new(&field.attrs);
         let ident = field.ident.clone().expect("Named field with no name ident");
         let span = ident.span();
         let name = ident.to_string();
         let member = Member::Named(ident);
 
-        Some(ParsedField::new(name, field, attributes, member, span))
+        Self::from_field(field, span, name, member)
     }
 
     pub fn from_unnamed_field((field, index): (Field, u32)) -> Option<Self> {
-        let attributes = JnixAttributes::new(&field.attrs);
         let span = field.ty.span();
         let name = format!("_{}", index);
         let member = Member::Unnamed(Index { index, span });
 
-        Some(ParsedField::new(name, field, attributes, member, span))
+        Self::from_field(field, span, name, member)
+    }
+
+    fn from_field(field: Field, span: Span, name: String, member: Member) -> Option<Self> {
+        let attributes = JnixAttributes::new(&field.attrs);
+
+        if attributes.has_flag("skip") {
+            None
+        } else {
+            Some(ParsedField::new(name, field, attributes, member, span))
+        }
     }
 
     pub fn binding(&self, prefix: &str) -> Ident {

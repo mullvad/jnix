@@ -27,6 +27,9 @@ use syn::{parse_macro_input, Data, DeriveInput, Fields, LitStr};
 /// to convert to the Java type. To do so, use the `#[jnix(map = "|value| ...")]` attribute with a
 /// conversion closure.
 ///
+/// Fields can be skipped using the `#[jnix(skip)]` attribute, so that they aren't used in the
+/// conversion process, and therefore not used as a parameter for the constructor.
+///
 /// The name of the target Java class must be specified using an attribute, like so:
 /// `#[jnix(class_name = "my.package.MyClass"]`.
 #[proc_macro_derive(IntoJava, attributes(jnix))]
