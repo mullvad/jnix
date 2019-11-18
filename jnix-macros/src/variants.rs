@@ -5,6 +5,8 @@ use syn::{punctuated::Punctuated, Ident, LitStr, Token, Variant};
 
 pub struct ParsedVariants {
     names: Vec<Ident>,
+    fields: Vec<ParsedFields>,
+    enum_class: bool,
 }
 
 impl ParsedVariants {
@@ -20,11 +22,11 @@ impl ParsedVariants {
 
         let only_has_unit_fields = fields.iter().all(ParsedFields::is_unit);
 
-        if !only_has_unit_fields {
-            panic!("Derive(IntoJava) not supported on enums with fields")
+        ParsedVariants {
+            names,
+            fields,
+            enum_class: only_has_unit_fields,
         }
-
-        ParsedVariants { names }
     }
 
     pub fn generate_enum_into_java(
@@ -33,18 +35,31 @@ impl ParsedVariants {
         type_name_literal: &LitStr,
         class_name: &str,
     ) -> TokenStream {
-        let conversions = self.generate_variant_conversions(
-            jni_class_name_literal,
-            type_name_literal,
-            class_name,
-        );
+        let conversions = if self.enum_class {
+            self.generate_enum_class_conversions(
+                jni_class_name_literal,
+                type_name_literal,
+                class_name,
+            )
+        } else {
+            self.generate_sealed_class_conversions(
+                jni_class_name_literal,
+                type_name_literal,
+                class_name,
+            )
+        };
+
+        let parameters = self
+            .fields
+            .iter()
+            .map(|field| field.generate_enum_variant_parameters());
 
         let variants = self.names;
 
         quote! {
             match self {
                 #(
-                    Self::#variants => {
+                    Self::#variants #parameters => {
                         #conversions
                     }
                 )*
@@ -52,7 +67,7 @@ impl ParsedVariants {
         }
     }
 
-    fn generate_variant_conversions(
+    fn generate_enum_class_conversions(
         &self,
         jni_class_name_literal: &LitStr,
         type_name_literal: &LitStr,
@@ -87,6 +102,37 @@ impl ParsedVariants {
                         )),
                     }
                 }
+            })
+            .collect()
+    }
+
+    fn generate_sealed_class_conversions(
+        &self,
+        jni_class_name_literal: &LitStr,
+        type_name_literal: &LitStr,
+        class_name: &str,
+    ) -> Vec<TokenStream> {
+        let jni_class_name = jni_class_name_literal.value();
+        let type_name = type_name_literal.value();
+
+        self.names
+            .iter()
+            .zip(self.fields.iter())
+            .map(|(variant_name, fields)| {
+                let variant_class_name = format!("{}.{}", class_name, variant_name);
+
+                let variant_jni_class_name = format!("{}${}", jni_class_name, variant_name);
+                let variant_jni_class_name_literal =
+                    LitStr::new(&variant_jni_class_name, Span::call_site());
+
+                let variant_type_name = format!("{}::{}", type_name, variant_name);
+                let variant_type_name_literal = LitStr::new(&variant_type_name, Span::call_site());
+
+                fields.generate_enum_variant_into_java(
+                    &variant_jni_class_name_literal,
+                    &variant_type_name_literal,
+                    &variant_class_name,
+                )
             })
             .collect()
     }

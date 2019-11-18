@@ -164,6 +164,16 @@ impl ParsedFields {
         self.field_type == FieldType::Unit
     }
 
+    pub fn generate_enum_variant_parameters(&self) -> TokenStream {
+        let names = self.original_bindings();
+
+        match self.field_type {
+            FieldType::Unit => quote! {},
+            FieldType::Named => quote! { { #( #names ),* } },
+            FieldType::Unnamed => quote! { ( #( #names ),* ) },
+        }
+    }
+
     pub fn generate_struct_into_java(
         &self,
         jni_class_name_literal: &LitStr,
@@ -180,6 +190,26 @@ impl ParsedFields {
 
         quote! {
             #( let #source_bindings = self.#members; )*
+            #conversion
+        }
+    }
+
+    pub fn generate_enum_variant_into_java(
+        &self,
+        jni_class_name_literal: &LitStr,
+        type_name_literal: &LitStr,
+        class_name: &str,
+    ) -> TokenStream {
+        let source_bindings = self.source_bindings();
+        let original_bindings = self.original_bindings();
+        let conversion = self.generate_into_java_conversion(
+            jni_class_name_literal,
+            type_name_literal,
+            class_name,
+        );
+
+        quote! {
+            #( let #source_bindings = #original_bindings; )*
             #conversion
         }
     }
@@ -243,6 +273,12 @@ impl ParsedFields {
                     let #final_binding = #converted_binding.into_java(env);
                 }
             })
+    }
+
+    fn original_bindings(&self) -> impl Iterator<Item = Ident> + '_ {
+        self.fields
+            .iter()
+            .map(|field| Ident::new(&field.name, field.span))
     }
 
     fn source_bindings(&self) -> impl Iterator<Item = &Ident> + '_ {
