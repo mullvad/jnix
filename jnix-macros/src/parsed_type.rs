@@ -1,4 +1,4 @@
-use crate::{JnixAttributes, ParsedFields};
+use crate::{JnixAttributes, ParsedFields, ParsedVariants};
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
 use syn::{Data, DeriveInput, Ident, LitStr};
@@ -56,14 +56,16 @@ impl ParsedType {
 }
 
 enum TypeData {
+    Enum(ParsedVariants),
     Struct(ParsedFields),
 }
 
 impl TypeData {
     pub fn from(input_data: Data, attributes: &JnixAttributes) -> Self {
         match input_data {
+            Data::Enum(data) => TypeData::Enum(ParsedVariants::new(data.variants)),
             Data::Struct(data) => TypeData::Struct(ParsedFields::new(data.fields, attributes)),
-            _ => panic!("Dervie(IntoJava) only supported on structs"),
+            Data::Union(_) => panic!("Dervie(IntoJava) not supported on unions"),
         }
     }
 
@@ -74,6 +76,11 @@ impl TypeData {
         class_name: &str,
     ) -> TokenStream {
         match self {
+            TypeData::Enum(variants) => variants.generate_enum_into_java(
+                jni_class_name_literal,
+                type_name_literal,
+                class_name,
+            ),
             TypeData::Struct(fields) => fields.generate_struct_into_java(
                 jni_class_name_literal,
                 type_name_literal,
