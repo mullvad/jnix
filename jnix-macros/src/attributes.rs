@@ -8,6 +8,13 @@ pub struct JnixAttributes {
 }
 
 impl JnixAttributes {
+    pub fn empty() -> Self {
+        JnixAttributes {
+            flags: HashSet::new(),
+            key_value_pairs: HashMap::new(),
+        }
+    }
+
     pub fn new(attributes: &Vec<Attribute>) -> Self {
         let jnix_ident = Ident::new("jnix", Span::call_site());
         let mut flags = HashSet::new();
