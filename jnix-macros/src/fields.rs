@@ -111,19 +111,36 @@ impl ParsedField {
     }
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum FieldType {
+    Unit,
+    Named,
+    Unnamed,
+}
+
 pub struct ParsedFields {
     fields: Vec<ParsedField>,
+    field_type: FieldType,
 }
 
 impl ParsedFields {
     pub fn new(fields: Fields, attributes: &JnixAttributes) -> Self {
+        let field_type = Self::get_field_type(&fields);
         let fields = if attributes.has_flag("skip_all") {
             vec![]
         } else {
             Self::collect_parsed_fields(fields)
         };
 
-        ParsedFields { fields }
+        ParsedFields { fields, field_type }
+    }
+
+    fn get_field_type(fields: &Fields) -> FieldType {
+        match fields {
+            Fields::Unit => FieldType::Unit,
+            Fields::Named(_) => FieldType::Named,
+            Fields::Unnamed(_) => FieldType::Unnamed,
+        }
     }
 
     fn collect_parsed_fields(fields: Fields) -> Vec<ParsedField> {
@@ -141,6 +158,10 @@ impl ParsedFields {
                 .filter_map(ParsedField::from_unnamed_field)
                 .collect(),
         }
+    }
+
+    pub fn is_unit(&self) -> bool {
+        self.field_type == FieldType::Unit
     }
 
     pub fn generate_struct_into_java(

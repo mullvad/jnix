@@ -1,6 +1,7 @@
+use crate::{JnixAttributes, ParsedFields};
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
-use syn::{punctuated::Punctuated, Fields, Ident, LitStr, Token, Variant};
+use syn::{punctuated::Punctuated, Ident, LitStr, Token, Variant};
 
 pub struct ParsedVariants {
     names: Vec<Ident>,
@@ -8,18 +9,22 @@ pub struct ParsedVariants {
 
 impl ParsedVariants {
     pub fn new(variants: Punctuated<Variant, Token![,]>) -> Self {
-        let only_has_unit_fields = variants.iter().all(|variant| match variant.fields {
-            Fields::Unit => true,
-            _ => false,
-        });
+        let size = variants.iter().count();
+        let mut names = Vec::with_capacity(size);
+        let mut fields = Vec::with_capacity(size);
+
+        for variant in variants {
+            names.push(variant.ident);
+            fields.push(ParsedFields::new(variant.fields, &JnixAttributes::empty()));
+        }
+
+        let only_has_unit_fields = fields.iter().all(ParsedFields::is_unit);
 
         if !only_has_unit_fields {
             panic!("Derive(IntoJava) not supported on enums with fields")
         }
 
-        ParsedVariants {
-            names: variants.into_iter().map(|variant| variant.ident).collect(),
-        }
+        ParsedVariants { names }
     }
 
     pub fn generate_enum_into_java(
