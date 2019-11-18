@@ -116,10 +116,14 @@ pub struct ParsedFields {
 }
 
 impl ParsedFields {
-    pub fn new(fields: Fields) -> Self {
-        ParsedFields {
-            fields: Self::collect_parsed_fields(fields),
-        }
+    pub fn new(fields: Fields, attributes: JnixAttributes) -> Self {
+        let fields = if attributes.has_flag("skip_all") {
+            vec![]
+        } else {
+            Self::collect_parsed_fields(fields)
+        };
+
+        ParsedFields { fields }
     }
 
     fn collect_parsed_fields(fields: Fields) -> Vec<ParsedField> {

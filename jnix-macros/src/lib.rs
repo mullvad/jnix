@@ -28,7 +28,8 @@ use syn::{parse_macro_input, Data, DeriveInput, Fields, LitStr};
 /// conversion closure.
 ///
 /// Fields can be skipped using the `#[jnix(skip)]` attribute, so that they aren't used in the
-/// conversion process, and therefore not used as a parameter for the constructor.
+/// conversion process, and therefore not used as a parameter for the constructor. The
+/// `#[jnix(skip_all)]` attribute can be used on the struct to skip all fields.
 ///
 /// The name of the target Java class must be specified using an attribute, like so:
 /// `#[jnix(class_name = "my.package.MyClass"]`.
@@ -46,7 +47,7 @@ pub fn derive_into_java(input: TokenStream) -> TokenStream {
     let jni_class_name_literal = LitStr::new(&jni_class_name, Span::call_site());
 
     let fields = extract_struct_fields(parsed_input.data);
-    let conversion = ParsedFields::new(fields).generate_struct_into_java(
+    let conversion = ParsedFields::new(fields, attributes).generate_struct_into_java(
         &jni_class_name_literal,
         &type_name_literal,
         &class_name,
