@@ -8,10 +8,11 @@
 extern crate proc_macro;
 
 mod attributes;
+mod fields;
 
-use crate::attributes::JnixAttributes;
+use crate::{attributes::JnixAttributes, fields::ParsedFields};
 use proc_macro::TokenStream;
-use proc_macro2::{Span, TokenStream as TokenStream2};
+use proc_macro2::Span;
 use quote::quote;
 use syn::{parse_macro_input, Data, DeriveInput, Fields, LitStr};
 
@@ -36,7 +37,11 @@ pub fn derive_into_java(input: TokenStream) -> TokenStream {
     let jni_class_name_literal = LitStr::new(&jni_class_name, Span::call_site());
 
     let fields = extract_struct_fields(parsed_input.data);
-    let (parameter_conversion, parameter_signatures, parameters) = generate_parameters(fields);
+    let conversion = ParsedFields::new(fields).generate_struct_into_java(
+        &jni_class_name_literal,
+        &type_name_literal,
+        &class_name,
+    );
 
     let tokens = quote! {
         impl<'borrow, 'env: 'borrow> jnix::IntoJava<'borrow, 'env> for #type_name {
@@ -45,29 +50,7 @@ pub fn derive_into_java(input: TokenStream) -> TokenStream {
             type JavaType = jnix::jni::objects::AutoLocal<'env, 'borrow>;
 
             fn into_java(self, env: &'borrow jnix::JnixEnv<'env>) -> Self::JavaType {
-                let mut constructor_signature = String::with_capacity(
-                    1 + #( #parameter_signatures.as_bytes().len() + )* 2
-                );
-
-                constructor_signature.push_str("(");
-                #( constructor_signature.push_str(#parameter_signatures); )*
-                constructor_signature.push_str(")V");
-
-                #( #parameter_conversion )*
-
-                let parameters = [ #( jnix::AsJValue::as_jvalue(&#parameters) ),* ];
-
-                let class = env.get_class(#jni_class_name_literal);
-                let object = env.new_object(&class, constructor_signature, &parameters)
-                    .expect(concat!(
-                        "Failed to convert ",
-                        #type_name_literal,
-                        " Rust type into ",
-                        #class_name,
-                        " Java object",
-                    ));
-
-                env.auto_local(object)
+                #conversion
             }
         }
     };
@@ -79,14 +62,5 @@ fn extract_struct_fields(data: Data) -> Fields {
     match data {
         Data::Struct(data) => data.fields,
         _ => panic!("Dervie(IntoJava) only supported on structs"),
-    }
-}
-
-fn generate_parameters(
-    fields: Fields,
-) -> (Vec<TokenStream2>, Vec<TokenStream2>, Vec<TokenStream2>) {
-    match fields {
-        Fields::Unit => (vec![], vec![], vec![]),
-        _ => panic!("Derive(IntoJava) only supported on unit structs"),
     }
 }
