@@ -1,3 +1,5 @@
+mod implementations;
+
 use crate::{AsJValue, JnixEnv};
 
 /// Conversion from a type into its Java representation.
