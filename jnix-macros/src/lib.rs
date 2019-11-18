@@ -18,8 +18,10 @@ use syn::{parse_macro_input, Data, DeriveInput, Fields, LitStr};
 
 /// Derives `IntoJava` for a type.
 ///
-/// The generated `IntoJava` implementation for a unit struct will simply call the default
-/// constructor of the target Java class.
+/// The generated `IntoJava` implementation for a struct will convert the field values into their
+/// respective Java types. Then, the target Java class is constructed by calling a constructor with
+/// the converted field values as parameters. Note that the field order is used as the constructor
+/// parameter order.
 ///
 /// The name of the target Java class must be specified using an attribute, like so:
 /// `#[jnix(class_name = "my.package.MyClass"]`.
@@ -49,6 +51,7 @@ pub fn derive_into_java(input: TokenStream) -> TokenStream {
 
             type JavaType = jnix::jni::objects::AutoLocal<'env, 'borrow>;
 
+            #[allow(non_snake_case)]
             fn into_java(self, env: &'borrow jnix::JnixEnv<'env>) -> Self::JavaType {
                 #conversion
             }
