@@ -9,12 +9,13 @@ extern crate proc_macro;
 
 mod attributes;
 mod fields;
+mod generics;
 mod parsed_type;
 mod variants;
 
 use crate::{
-    attributes::JnixAttributes, fields::ParsedFields, parsed_type::ParsedType,
-    variants::ParsedVariants,
+    attributes::JnixAttributes, fields::ParsedFields, generics::ParsedGenerics,
+    parsed_type::ParsedType, variants::ParsedVariants,
 };
 use proc_macro::TokenStream;
 use syn::{parse_macro_input, DeriveInput};
