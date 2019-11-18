@@ -9,12 +9,11 @@ extern crate proc_macro;
 
 mod attributes;
 mod fields;
+mod parsed_type;
 
-use crate::{attributes::JnixAttributes, fields::ParsedFields};
+use crate::{attributes::JnixAttributes, fields::ParsedFields, parsed_type::ParsedType};
 use proc_macro::TokenStream;
-use proc_macro2::Span;
-use quote::quote;
-use syn::{parse_macro_input, Data, DeriveInput, Fields, LitStr};
+use syn::{parse_macro_input, DeriveInput};
 
 /// Derives `IntoJava` for a type.
 ///
@@ -35,43 +34,7 @@ use syn::{parse_macro_input, Data, DeriveInput, Fields, LitStr};
 /// `#[jnix(class_name = "my.package.MyClass"]`.
 #[proc_macro_derive(IntoJava, attributes(jnix))]
 pub fn derive_into_java(input: TokenStream) -> TokenStream {
-    let parsed_input = parse_macro_input!(input as DeriveInput);
-    let attributes = JnixAttributes::new(&parsed_input.attrs);
-    let type_name = parsed_input.ident;
-    let type_name_literal = LitStr::new(&type_name.to_string(), Span::call_site());
-    let class_name = attributes
-        .get_value("class_name")
-        .expect("Missing Java class name")
-        .value();
-    let jni_class_name = class_name.replace(".", "/");
-    let jni_class_name_literal = LitStr::new(&jni_class_name, Span::call_site());
+    let parsed_type = ParsedType::new(parse_macro_input!(input as DeriveInput));
 
-    let fields = extract_struct_fields(parsed_input.data);
-    let conversion = ParsedFields::new(fields, attributes).generate_struct_into_java(
-        &jni_class_name_literal,
-        &type_name_literal,
-        &class_name,
-    );
-
-    let tokens = quote! {
-        impl<'borrow, 'env: 'borrow> jnix::IntoJava<'borrow, 'env> for #type_name {
-            const JNI_SIGNATURE: &'static str = concat!("L", #jni_class_name_literal, ";");
-
-            type JavaType = jnix::jni::objects::AutoLocal<'env, 'borrow>;
-
-            #[allow(non_snake_case)]
-            fn into_java(self, env: &'borrow jnix::JnixEnv<'env>) -> Self::JavaType {
-                #conversion
-            }
-        }
-    };
-
-    TokenStream::from(tokens)
-}
-
-fn extract_struct_fields(data: Data) -> Fields {
-    match data {
-        Data::Struct(data) => data.fields,
-        _ => panic!("Dervie(IntoJava) only supported on structs"),
-    }
+    TokenStream::from(parsed_type.generate_into_java())
 }
