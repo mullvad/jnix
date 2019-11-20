@@ -1,7 +1,10 @@
 use crate::JnixAttributes;
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
-use syn::{spanned::Spanned, Field, Fields, Ident, Index, LitStr, Member};
+use syn::{
+    parse_str, spanned::Spanned, ExprClosure, Field, Fields, Ident, Index, LitStr, Member, Pat,
+    PatType, Token,
+};
 
 pub struct ParsedField {
     pub name: String,
@@ -53,6 +56,50 @@ impl ParsedField {
 
     pub fn binding(&self, prefix: &str) -> Ident {
         Ident::new(&format!("_{}_{}", prefix, self.name), self.span)
+    }
+
+    pub fn preconversion(&self) -> TokenStream {
+        let source = &self.source_binding;
+
+        match self.attributes.get_value("map") {
+            Some(closure_string_literal) => {
+                let mut closure = parse_str(&closure_string_literal.value())
+                    .expect("Invalid closure syntax in jnix(map = ...) attribute");
+
+                self.prepare_map_closure(&mut closure);
+
+                quote! { (#closure)(#source) }
+            }
+            None => quote! { #source },
+        }
+    }
+
+    fn prepare_map_closure(&self, closure: &mut ExprClosure) {
+        assert!(
+            closure.inputs.len() <= 1,
+            "Too many parameters in jnix(map = ...) closure"
+        );
+
+        let input = closure
+            .inputs
+            .pop()
+            .expect("Missing parameter in jnix(map = ...) closure")
+            .into_value();
+
+        closure.inputs.push_value(self.add_type_to_parameter(input));
+    }
+
+    fn add_type_to_parameter(&self, parameter: Pat) -> Pat {
+        if let &Pat::Type(_) = &parameter {
+            parameter
+        } else {
+            Pat::Type(PatType {
+                attrs: vec![],
+                pat: Box::new(parameter),
+                colon_token: Token![:](Span::call_site()),
+                ty: Box::new(self.field.ty.clone()),
+            })
+        }
     }
 }
 
@@ -154,11 +201,13 @@ impl ParsedFields {
             .iter()
             .zip(signature_bindings.iter().zip(final_bindings.iter()))
             .map(|(field, (signature_binding, final_binding))| {
-                let source_binding = &field.source_binding;
+                let converted_binding = field.binding("converted");
+                let conversion = field.preconversion();
 
                 quote! {
-                    let #signature_binding = #source_binding.jni_signature();
-                    let #final_binding = #source_binding.into_java(env);
+                    let #converted_binding = #conversion;
+                    let #signature_binding = #converted_binding.jni_signature();
+                    let #final_binding = #converted_binding.into_java(env);
                 }
             })
     }
