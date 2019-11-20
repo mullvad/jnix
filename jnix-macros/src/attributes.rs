@@ -1,19 +1,23 @@
 use proc_macro2::Span;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use syn::{Attribute, Ident, Lit, LitStr, MetaNameValue};
 
 pub struct JnixAttributes {
+    flags: HashSet<String>,
     key_value_pairs: HashMap<String, LitStr>,
 }
 
 impl JnixAttributes {
     pub fn new(attributes: &Vec<Attribute>) -> Self {
         let jnix_ident = Ident::new("jnix", Span::call_site());
+        let mut flags = HashSet::new();
         let mut key_value_pairs = HashMap::new();
 
         for attribute in attributes {
             if attribute.path.is_ident(&jnix_ident) {
-                if let Ok(key_value_pair) = attribute.parse_args::<MetaNameValue>() {
+                if let Ok(flag) = attribute.parse_args::<Ident>() {
+                    flags.insert(flag.to_string());
+                } else if let Ok(key_value_pair) = attribute.parse_args::<MetaNameValue>() {
                     let key = key_value_pair
                         .path
                         .get_ident()
@@ -32,7 +36,14 @@ impl JnixAttributes {
             }
         }
 
-        JnixAttributes { key_value_pairs }
+        JnixAttributes {
+            flags,
+            key_value_pairs,
+        }
+    }
+
+    pub fn has_flag(&self, flag: &str) -> bool {
+        self.flags.contains(flag)
     }
 
     pub fn get_value(&self, key: &str) -> Option<LitStr> {
