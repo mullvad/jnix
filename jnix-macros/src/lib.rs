@@ -9,14 +9,22 @@ extern crate proc_macro;
 
 mod attributes;
 mod fields;
+mod parsed_type;
+mod variants;
 
-use crate::{attributes::JnixAttributes, fields::ParsedFields};
+use crate::{
+    attributes::JnixAttributes, fields::ParsedFields, parsed_type::ParsedType,
+    variants::ParsedVariants,
+};
 use proc_macro::TokenStream;
-use proc_macro2::Span;
-use quote::quote;
-use syn::{parse_macro_input, Data, DeriveInput, Fields, LitStr};
+use syn::{parse_macro_input, DeriveInput};
 
 /// Derives `IntoJava` for a type.
+///
+/// The name of the target Java class must be specified using an attribute, like so:
+/// `#[jnix(class_name = "my.package.MyClass"]`.
+///
+/// # Structs
 ///
 /// The generated `IntoJava` implementation for a struct will convert the field values into their
 /// respective Java types. Then, the target Java class is constructed by calling a constructor with
@@ -31,47 +39,15 @@ use syn::{parse_macro_input, Data, DeriveInput, Fields, LitStr};
 /// conversion process, and therefore not used as a parameter for the constructor. The
 /// `#[jnix(skip_all)]` attribute can be used on the struct to skip all fields.
 ///
-/// The name of the target Java class must be specified using an attribute, like so:
-/// `#[jnix(class_name = "my.package.MyClass"]`.
+/// # Enums
+///
+/// The generated `IntoJava` implementation for a enum that only has unit variants (i.e., no tuple
+/// or struct variants) returns a static field value from the specified Java target class.  The
+/// name used for the static field in the Java class is the same as the Rust variant name. This
+/// allows the Rust enum to be mapped to a Java enum.
 #[proc_macro_derive(IntoJava, attributes(jnix))]
 pub fn derive_into_java(input: TokenStream) -> TokenStream {
-    let parsed_input = parse_macro_input!(input as DeriveInput);
-    let attributes = JnixAttributes::new(&parsed_input.attrs);
-    let type_name = parsed_input.ident;
-    let type_name_literal = LitStr::new(&type_name.to_string(), Span::call_site());
-    let class_name = attributes
-        .get_value("class_name")
-        .expect("Missing Java class name")
-        .value();
-    let jni_class_name = class_name.replace(".", "/");
-    let jni_class_name_literal = LitStr::new(&jni_class_name, Span::call_site());
+    let parsed_type = ParsedType::new(parse_macro_input!(input as DeriveInput));
 
-    let fields = extract_struct_fields(parsed_input.data);
-    let conversion = ParsedFields::new(fields, attributes).generate_struct_into_java(
-        &jni_class_name_literal,
-        &type_name_literal,
-        &class_name,
-    );
-
-    let tokens = quote! {
-        impl<'borrow, 'env: 'borrow> jnix::IntoJava<'borrow, 'env> for #type_name {
-            const JNI_SIGNATURE: &'static str = concat!("L", #jni_class_name_literal, ";");
-
-            type JavaType = jnix::jni::objects::AutoLocal<'env, 'borrow>;
-
-            #[allow(non_snake_case)]
-            fn into_java(self, env: &'borrow jnix::JnixEnv<'env>) -> Self::JavaType {
-                #conversion
-            }
-        }
-    };
-
-    TokenStream::from(tokens)
-}
-
-fn extract_struct_fields(data: Data) -> Fields {
-    match data {
-        Data::Struct(data) => data.fields,
-        _ => panic!("Dervie(IntoJava) only supported on structs"),
-    }
+    TokenStream::from(parsed_type.generate_into_java())
 }

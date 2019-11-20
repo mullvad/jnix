@@ -116,7 +116,7 @@ pub struct ParsedFields {
 }
 
 impl ParsedFields {
-    pub fn new(fields: Fields, attributes: JnixAttributes) -> Self {
+    pub fn new(fields: Fields, attributes: &JnixAttributes) -> Self {
         let fields = if attributes.has_flag("skip_all") {
             vec![]
         } else {
