@@ -25,8 +25,10 @@ use syn::{parse_macro_input, DeriveInput};
 
 /// Derives `IntoJava` for a type.
 ///
-/// The name of the target Java class must be specified using an attribute, like so:
-/// `#[jnix(class_name = "my.package.MyClass"]`.
+/// The name of the target Java class must be known for code generation. Either it can specified
+/// explicitly using an attribute, like so: `#[jnix(class_name = "my.package.MyClass"]`, or it can
+/// be derived from the Rust type name as long as the containing Java package is specified using an
+/// attribute, like so: `#[jnix(package = "my.package")]`.
 ///
 /// # Structs
 ///

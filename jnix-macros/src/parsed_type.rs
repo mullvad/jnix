@@ -24,6 +24,8 @@ impl ParsedType {
     }
 
     pub fn generate_into_java(self) -> TokenStream {
+        let class_name = self.class_name();
+
         let type_name = self.type_name;
         let type_name_literal = LitStr::new(&type_name.to_string(), Span::call_site());
 
@@ -31,12 +33,6 @@ impl ParsedType {
         let trait_generics = self.generics.trait_generics();
         let type_generics = self.generics.type_generics();
         let where_clause = self.generics.where_clause();
-
-        let class_name = self
-            .attributes
-            .get_value("class_name")
-            .expect("Missing Java class name")
-            .value();
 
         let jni_class_name = class_name.replace(".", "/");
         let jni_class_name_literal = LitStr::new(&jni_class_name, Span::call_site());
@@ -62,6 +58,23 @@ impl ParsedType {
                 }
             }
         }
+    }
+
+    fn class_name(&self) -> String {
+        if let Some(literal) = self.attributes.get_value("class_name") {
+            return literal.value();
+        }
+
+        if let Some(literal) = self.attributes.get_value("package") {
+            let mut class_name = literal.value();
+
+            class_name.push('.');
+            class_name.push_str(&self.type_name.to_string());
+
+            return class_name;
+        }
+
+        panic!("Missing Java class name");
     }
 }
 
