@@ -45,6 +45,13 @@ use syn::{parse_macro_input, DeriveInput};
 /// or struct variants) returns a static field value from the specified Java target class.  The
 /// name used for the static field in the Java class is the same as the Rust variant name. This
 /// allows the Rust enum to be mapped to a Java enum.
+///
+/// When an enum has at least one tuple or struct variant, the generated `IntoJava` implementation
+/// will assume that that there is a class hierarchy to represent the type. The target Java class
+/// is used as the super class, and is the Java type returned from the conversion. The class is
+/// assumed to have one inner class for each variant, and the conversion actually instantiates an
+/// object for the respective variant type, using the same rules for the fields as the rules for
+/// struct fields.
 #[proc_macro_derive(IntoJava, attributes(jnix))]
 pub fn derive_into_java(input: TokenStream) -> TokenStream {
     let parsed_type = ParsedType::new(parse_macro_input!(input as DeriveInput));
