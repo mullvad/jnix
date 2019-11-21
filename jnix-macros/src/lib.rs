@@ -9,11 +9,15 @@ extern crate proc_macro;
 
 mod attributes;
 mod fields;
+mod generics;
 mod parsed_type;
 mod variants;
 
 use crate::{
-    attributes::JnixAttributes, fields::ParsedFields, parsed_type::ParsedType,
+    attributes::JnixAttributes,
+    fields::ParsedFields,
+    generics::{ParsedGenerics, TypeParameters},
+    parsed_type::ParsedType,
     variants::ParsedVariants,
 };
 use proc_macro::TokenStream;
@@ -38,6 +42,10 @@ use syn::{parse_macro_input, DeriveInput};
 /// Fields can be skipped using the `#[jnix(skip)]` attribute, so that they aren't used in the
 /// conversion process, and therefore not used as a parameter for the constructor. The
 /// `#[jnix(skip_all)]` attribute can be used on the struct to skip all fields.
+///
+/// The target class of a specific field can be set manually with the
+/// `#[jnix(target_class = "...")]` attribute. However, be aware that the target class must have
+/// the expected constructor with the parameter list based on the field order of the Rust type.
 ///
 /// # Enums
 ///

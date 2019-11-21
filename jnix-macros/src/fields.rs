@@ -1,9 +1,9 @@
-use crate::JnixAttributes;
+use crate::{JnixAttributes, TypeParameters};
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
 use syn::{
     parse_str, spanned::Spanned, ExprClosure, Field, Fields, Ident, Index, LitStr, Member, Pat,
-    PatType, Token,
+    PatType, Token, Type,
 };
 
 pub struct ParsedField {
@@ -60,6 +60,10 @@ impl ParsedField {
         } else {
             Some(ParsedField::new(name, field, attributes, member, span))
         }
+    }
+
+    pub fn get_type(&self) -> &Type {
+        &self.field.ty
     }
 
     pub fn binding(&self, prefix: &str) -> Ident {
@@ -179,6 +183,7 @@ impl ParsedFields {
         jni_class_name_literal: &LitStr,
         type_name_literal: &LitStr,
         class_name: &str,
+        type_parameters: &TypeParameters,
     ) -> TokenStream {
         let source_bindings = self.source_bindings();
         let members = self.members();
@@ -186,6 +191,7 @@ impl ParsedFields {
             jni_class_name_literal,
             type_name_literal,
             class_name,
+            type_parameters,
         );
 
         quote! {
@@ -199,6 +205,7 @@ impl ParsedFields {
         jni_class_name_literal: &LitStr,
         type_name_literal: &LitStr,
         class_name: &str,
+        type_parameters: &TypeParameters,
     ) -> TokenStream {
         let source_bindings = self.source_bindings();
         let original_bindings = self.original_bindings();
@@ -206,6 +213,7 @@ impl ParsedFields {
             jni_class_name_literal,
             type_name_literal,
             class_name,
+            type_parameters,
         );
 
         quote! {
@@ -219,10 +227,11 @@ impl ParsedFields {
         jni_class_name_literal: &LitStr,
         type_name_literal: &LitStr,
         class_name: &str,
+        type_parameters: &TypeParameters,
     ) -> TokenStream {
         let signature_bindings = self.bindings("signature").collect();
         let final_bindings = self.bindings("final").collect();
-        let declarations = self.declarations(&signature_bindings, &final_bindings);
+        let declarations = self.declarations(&signature_bindings, &final_bindings, type_parameters);
 
         quote! {
             #( #declarations )*
@@ -250,26 +259,38 @@ impl ParsedFields {
         }
     }
 
-    fn declarations<'a, 'b, 'c, 'z>(
+    fn declarations<'a, 'b, 'c, 'd, 'z>(
         &'a self,
         signature_bindings: &'b Vec<Ident>,
         final_bindings: &'c Vec<Ident>,
+        type_parameters: &'d TypeParameters,
     ) -> impl Iterator<Item = TokenStream> + 'z
     where
         'a: 'z,
         'b: 'z,
         'c: 'z,
+        'd: 'z,
     {
         self.fields
             .iter()
             .zip(signature_bindings.iter().zip(final_bindings.iter()))
-            .map(|(field, (signature_binding, final_binding))| {
+            .map(move |(field, (signature_binding, final_binding))| {
                 let converted_binding = field.binding("converted");
                 let conversion = field.preconversion();
 
+                let signature = if let Some(target) = field.attributes.get_value("target_class") {
+                    let signature = format!("L{};", target.value().replace(".", "/"));
+
+                    quote! { #signature }
+                } else if type_parameters.is_used_in_type(&field.get_type()) {
+                    quote! { "Ljava/lang/Object;" }
+                } else {
+                    quote! { #converted_binding.jni_signature() }
+                };
+
                 quote! {
                     let #converted_binding = #conversion;
-                    let #signature_binding = #converted_binding.jni_signature();
+                    let #signature_binding = #signature;
                     let #final_binding = #converted_binding.into_java(env);
                 }
             })

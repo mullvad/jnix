@@ -1,4 +1,4 @@
-use crate::{JnixAttributes, ParsedFields};
+use crate::{JnixAttributes, ParsedFields, TypeParameters};
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
 use syn::{punctuated::Punctuated, Ident, LitStr, Token, Variant};
@@ -34,6 +34,7 @@ impl ParsedVariants {
         jni_class_name_literal: &LitStr,
         type_name_literal: &LitStr,
         class_name: &str,
+        type_parameters: &TypeParameters,
     ) -> TokenStream {
         let conversions = if self.enum_class {
             self.generate_enum_class_conversions(
@@ -46,6 +47,7 @@ impl ParsedVariants {
                 jni_class_name_literal,
                 type_name_literal,
                 class_name,
+                type_parameters,
             )
         };
 
@@ -111,6 +113,7 @@ impl ParsedVariants {
         jni_class_name_literal: &LitStr,
         type_name_literal: &LitStr,
         class_name: &str,
+        type_parameters: &TypeParameters,
     ) -> Vec<TokenStream> {
         let jni_class_name = jni_class_name_literal.value();
         let type_name = type_name_literal.value();
@@ -132,6 +135,7 @@ impl ParsedVariants {
                     &variant_jni_class_name_literal,
                     &variant_type_name_literal,
                     &variant_class_name,
+                    type_parameters,
                 )
             })
             .collect()
