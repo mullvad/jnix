@@ -1,9 +1,9 @@
-#![deny(missing_docs)]
-
 //! # JNIX
 //!
 //! This crate provides some helper high-level extensions for an idiomatic way of using JNI with
 //! Rust.
+
+#![deny(missing_docs)]
 
 pub extern crate jni;
 
