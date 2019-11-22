@@ -13,17 +13,14 @@ pub struct ParsedField {
     pub member: Member,
     pub source_binding: Ident,
     pub span: Span,
+    pub skip: bool,
 }
 
 impl ParsedField {
-    pub fn new(
-        name: String,
-        field: Field,
-        attributes: JnixAttributes,
-        member: Member,
-        span: Span,
-    ) -> Self {
+    pub fn new(name: String, field: Field, member: Member, span: Span) -> Self {
+        let attributes = JnixAttributes::new(&field.attrs);
         let source_binding = Ident::new(&format!("_source_{}", name), span);
+        let skip = attributes.has_flag("skip");
 
         ParsedField {
             name,
@@ -32,34 +29,25 @@ impl ParsedField {
             member,
             source_binding,
             span,
+            skip,
         }
     }
 
-    pub fn from_named_field(field: Field) -> Option<Self> {
+    pub fn from_named_field(field: Field) -> Self {
         let ident = field.ident.clone().expect("Named field with no name ident");
         let span = ident.span();
         let name = ident.to_string();
         let member = Member::Named(ident);
 
-        Self::from_field(field, span, name, member)
+        ParsedField::new(name, field, member, span)
     }
 
-    pub fn from_unnamed_field((field, index): (Field, u32)) -> Option<Self> {
+    pub fn from_unnamed_field((field, index): (Field, u32)) -> Self {
         let span = field.ty.span();
         let name = format!("_{}", index);
         let member = Member::Unnamed(Index { index, span });
 
-        Self::from_field(field, span, name, member)
-    }
-
-    fn from_field(field: Field, span: Span, name: String, member: Member) -> Option<Self> {
-        let attributes = JnixAttributes::new(&field.attrs);
-
-        if attributes.has_flag("skip") {
-            None
-        } else {
-            Some(ParsedField::new(name, field, attributes, member, span))
-        }
+        ParsedField::new(name, field, member, span)
     }
 
     pub fn get_type(&self) -> &Type {
@@ -130,11 +118,13 @@ pub struct ParsedFields {
 impl ParsedFields {
     pub fn new(fields: Fields, attributes: &JnixAttributes) -> Self {
         let field_type = Self::get_field_type(&fields);
-        let fields = if attributes.has_flag("skip_all") {
-            vec![]
-        } else {
-            Self::collect_parsed_fields(fields)
-        };
+        let mut fields = Self::collect_parsed_fields(fields);
+
+        if attributes.has_flag("skip_all") {
+            for field in &mut fields {
+                field.skip = true;
+            }
+        }
 
         ParsedFields { fields, field_type }
     }
@@ -153,13 +143,13 @@ impl ParsedFields {
             Fields::Named(fields) => fields
                 .named
                 .into_iter()
-                .filter_map(ParsedField::from_named_field)
+                .map(ParsedField::from_named_field)
                 .collect(),
             Fields::Unnamed(fields) => fields
                 .unnamed
                 .into_iter()
                 .zip(0..)
-                .filter_map(ParsedField::from_unnamed_field)
+                .map(ParsedField::from_unnamed_field)
                 .collect(),
         }
     }
@@ -273,6 +263,7 @@ impl ParsedFields {
     {
         self.fields
             .iter()
+            .filter(|field| !field.skip)
             .zip(signature_bindings.iter().zip(final_bindings.iter()))
             .map(move |(field, (signature_binding, final_binding))| {
                 let converted_binding = field.binding("converted");
@@ -303,14 +294,23 @@ impl ParsedFields {
     }
 
     fn source_bindings(&self) -> impl Iterator<Item = &Ident> + '_ {
-        self.fields.iter().map(|field| &field.source_binding)
+        self.fields
+            .iter()
+            .filter(|field| !field.skip)
+            .map(|field| &field.source_binding)
     }
 
     fn bindings(&self, prefix: &'static str) -> impl Iterator<Item = Ident> + '_ {
-        self.fields.iter().map(move |field| field.binding(prefix))
+        self.fields
+            .iter()
+            .filter(|field| !field.skip)
+            .map(move |field| field.binding(prefix))
     }
 
     fn members(&self) -> impl Iterator<Item = &Member> + '_ {
-        self.fields.iter().map(|field| &field.member)
+        self.fields
+            .iter()
+            .filter(|field| !field.skip)
+            .map(|field| &field.member)
     }
 }
