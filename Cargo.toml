@@ -2,6 +2,7 @@
 name = "jnix"
 version = "0.1.0"
 authors = ["Mullvad VPN <admin@mullvad.net>"]
+readme = "README.md"
 keywords = ["ffi", "java", "jni"]
 categories = ["external-ffi-bindings"]
 repository = "https://github.com/mullvad/jnix"
