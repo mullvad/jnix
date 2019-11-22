@@ -1,6 +1,6 @@
 use jni::objects::{AutoLocal, JValue};
 
-/// Returns a value as it's [`JValue`] representation.
+/// Returns a value as its [`JValue`] representation.
 ///
 /// [`JValue`]: https://docs.rs/jni/0.14.0/jni/objects/enum.JValue.html
 pub trait AsJValue<'env> {
