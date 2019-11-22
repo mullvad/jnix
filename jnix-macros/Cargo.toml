@@ -2,12 +2,16 @@
 name = "jnix-macros"
 version = "0.1.0"
 authors = ["Mullvad VPN <admin@mullvad.net>"]
+readme = "README.md"
 keywords = ["ffi", "java", "jni"]
 categories = ["external-ffi-bindings"]
 repository = "https://github.com/mullvad/jnix"
 edition = "2018"
 
 [lib]
+# The following line is needed in order to run `cargo-readme` correctly.
+# See issue: https://github.com/livioribeiro/cargo-readme/issues/32
+path = "src/lib.rs"
 proc-macro = true
 
 [dependencies]
