@@ -11,7 +11,7 @@ edition = "2018"
 [lib]
 # The following line is needed in order to run `cargo-readme` correctly.
 # See issue: https://github.com/livioribeiro/cargo-readme/issues/32
-path = "."
+path = "src/lib.rs"
 proc-macro = true
 
 [dependencies]
