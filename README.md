@@ -53,7 +53,7 @@ pub extern "system" fn Java_my_package_JniClass_getData<'env>(
 package my.package;
 
 public class MyData {
-    public MyData(number: int, string: String) {
+    public MyData(int number, String string) {
         // This is the constructor that is called by the generated `IntoJava` code
         //
         // Note that the fields don't actually have to exist, the only thing that's necessary
