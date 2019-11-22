@@ -288,9 +288,15 @@ impl ParsedFields {
     }
 
     fn original_bindings(&self) -> impl Iterator<Item = Ident> + '_ {
-        self.fields
-            .iter()
-            .map(|field| Ident::new(&field.name, field.span))
+        let is_named = self.field_type == FieldType::Named;
+
+        self.fields.iter().map(move |field| {
+            if is_named && field.skip {
+                Ident::new(&format!("_{}", field.name), field.span)
+            } else {
+                Ident::new(&field.name, field.span)
+            }
+        })
     }
 
     fn source_bindings(&self) -> impl Iterator<Item = &Ident> + '_ {
