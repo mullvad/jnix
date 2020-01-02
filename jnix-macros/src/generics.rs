@@ -1,27 +1,26 @@
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
-use std::{collections::HashSet, iter};
-use syn::{
-    parse_str, Generics, Ident, Lifetime, Path, ReturnType, Token, TraitBound, TraitBoundModifier,
-    Type, TypeParamBound,
-};
+use std::collections::HashSet;
+use syn::{Generics, Ident, Lifetime, Path, ReturnType, Token, Type, TypeParam, TypeParamBound};
 
 pub struct ParsedGenerics {
     type_parameters: Vec<Ident>,
     parameters: Vec<TokenStream>,
-    constraints: Vec<TokenStream>,
+    lifetime_constraints: Vec<TokenStream>,
+    type_constraints: Vec<TypeParam>,
 }
 
 impl ParsedGenerics {
     pub fn new(generics: &Generics) -> Self {
         let (lifetimes, types) = Self::collect_generic_definitions(generics);
         let parameters = Self::collect_generic_params(&lifetimes, &types);
-        let constraints = Self::collect_constraints(generics);
+        let (lifetime_constraints, type_constraints) = Self::collect_constraints(generics);
 
         ParsedGenerics {
             type_parameters: types,
             parameters,
-            constraints,
+            lifetime_constraints,
+            type_constraints,
         }
     }
 
@@ -46,39 +45,16 @@ impl ParsedGenerics {
         lifetimes.chain(types).collect()
     }
 
-    fn collect_constraints(generics: &Generics) -> Vec<TokenStream> {
-        let extra_type_constraint = Self::create_extra_type_constraint();
-        let extra_lifetime_constraints = iter::once(quote! { 'env: 'borrow });
-
+    fn collect_constraints(generics: &Generics) -> (Vec<TokenStream>, Vec<TypeParam>) {
         let lifetime_constraints = generics
             .lifetimes()
             .filter(|definition| definition.colon_token.is_some())
-            .map(|definition| quote! { #definition });
+            .map(|definition| quote! { #definition })
+            .collect();
 
-        let type_constraints = generics.type_params().cloned().map(|mut type_param| {
-            if type_param.colon_token.is_none() {
-                type_param.colon_token = Some(Token![:](Span::call_site()));
-            }
+        let type_constraints = generics.type_params().cloned().collect();
 
-            type_param.bounds.push(extra_type_constraint.clone());
-
-            quote! { #type_param }
-        });
-
-        lifetime_constraints
-            .chain(extra_lifetime_constraints)
-            .chain(type_constraints)
-            .collect()
-    }
-
-    fn create_extra_type_constraint() -> TypeParamBound {
-        TypeParamBound::Trait(TraitBound {
-            paren_token: None,
-            modifier: TraitBoundModifier::None,
-            lifetimes: None,
-            path: parse_str("jnix::IntoJava<'borrow, 'env>")
-                .expect("Invalid syntax in hardcoded string"),
-        })
+        (lifetime_constraints, type_constraints)
     }
 
     pub fn type_parameters(&self) -> TypeParameters {
@@ -91,15 +67,24 @@ impl ParsedGenerics {
         }
     }
 
-    pub fn impl_generics(&self) -> TokenStream {
-        let trait_parameters = [quote! { 'borrow }, quote! { 'env }];
-        let impl_parameters = trait_parameters.iter().chain(self.parameters.iter());
+    pub fn impl_generics(
+        &self,
+        trait_parameters: impl IntoIterator<Item = TokenStream>,
+    ) -> TokenStream {
+        let impl_parameters = trait_parameters
+            .into_iter()
+            .chain(self.parameters.iter().cloned());
 
         quote! { < #( #impl_parameters ),* > }
     }
 
-    pub fn trait_generics(&self) -> TokenStream {
-        quote! { <'borrow, 'env> }
+    pub fn trait_generics(
+        &self,
+        trait_parameters: impl IntoIterator<Item = TokenStream>,
+    ) -> TokenStream {
+        let trait_parameters = trait_parameters.into_iter();
+
+        quote! { < #( #trait_parameters ),* > }
     }
 
     pub fn type_generics(&self) -> Option<TokenStream> {
@@ -112,10 +97,42 @@ impl ParsedGenerics {
         }
     }
 
-    pub fn where_clause(&self) -> TokenStream {
-        let constraints = self.constraints.iter();
+    pub fn where_clause(
+        &self,
+        extra_constraints: impl IntoIterator<Item = TokenStream>,
+        extra_type_bounds: impl IntoIterator<Item = TokenStream>,
+    ) -> TokenStream {
+        let constraints = extra_constraints
+            .into_iter()
+            .chain(self.lifetime_constraints.iter().cloned())
+            .chain(self.build_type_constraints(extra_type_bounds));
 
         quote! { where #( #constraints ),* }
+    }
+
+    fn build_type_constraints(
+        &self,
+        extra_type_bounds_tokens: impl IntoIterator<Item = TokenStream>,
+    ) -> impl Iterator<Item = TokenStream> {
+        let extra_type_bounds: Vec<TypeParamBound> = extra_type_bounds_tokens
+            .into_iter()
+            .map(|tokens| syn::parse2(tokens).expect("Invalid type bound specification"))
+            .collect();
+
+        self.type_constraints
+            .clone()
+            .into_iter()
+            .map(move |mut type_param| {
+                if !extra_type_bounds.is_empty() {
+                    if type_param.colon_token.is_none() {
+                        type_param.colon_token = Some(Token![:](Span::call_site()));
+                    }
+
+                    type_param.bounds.extend(extra_type_bounds.clone());
+                }
+
+                quote! { #type_param }
+            })
     }
 }
 
