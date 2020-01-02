@@ -23,6 +23,32 @@ impl ParsedType {
         }
     }
 
+    pub fn generate_from_java(self) -> TokenStream {
+        let class_name = self.class_name();
+
+        let type_name = self.type_name;
+
+        let jni_class_name = class_name.replace(".", "/");
+        let jni_class_name_literal = LitStr::new(&jni_class_name, Span::call_site());
+
+        quote! {
+            impl<'env, 'sub_env> jnix::FromJava<'env, jnix::jni::objects::JObject<'sub_env>>
+                for #type_name
+            where
+                'env: 'sub_env,
+            {
+                const JNI_SIGNATURE: &'static str = concat!("L", #jni_class_name_literal, ";");
+
+                fn from_java(
+                    env: &jnix::JnixEnv<'env>,
+                    source: jnix::jni::objects::JObject<'sub_env>,
+                ) -> Self {
+                    todo!();
+                }
+            }
+        }
+    }
+
     pub fn generate_into_java(self) -> TokenStream {
         let class_name = self.class_name();
 
