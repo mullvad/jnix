@@ -24,6 +24,23 @@ use crate::{
 use proc_macro::TokenStream;
 use syn::{parse_macro_input, DeriveInput};
 
+/// Derives `FromJava` for a type.
+///
+/// More specifically, `FromJava<'env, JObject<'sub_env>>` is derived for the type. This also makes
+/// available a `FromJava<'env, AutoLocal<'sub_env, 'borrow>>` implementation through a blanket
+/// implementation.
+///
+/// The name of the target Java class must be known for code generation. Either it can be specified
+/// explicitly using an attribute, like so: `#[jnix(class_name = "my.package.MyClass"]`, or it can
+/// be derived from the Rust type name as long as the containing Java package is specified using an
+/// attribute, like so: `#[jnix(package = "my.package")]`.
+#[proc_macro_derive(FromJava, attributes(jnix))]
+pub fn derive_from_java(input: TokenStream) -> TokenStream {
+    let parsed_type = ParsedType::new(parse_macro_input!(input as DeriveInput));
+
+    TokenStream::from(parsed_type.generate_from_java())
+}
+
 /// Derives `IntoJava` for a type.
 ///
 /// The name of the target Java class must be known for code generation. Either it can be specified
