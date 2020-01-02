@@ -55,10 +55,16 @@ impl ParsedType {
         let type_name = self.type_name;
         let type_name_literal = LitStr::new(&type_name.to_string(), Span::call_site());
 
-        let impl_generics = self.generics.impl_generics();
-        let trait_generics = self.generics.trait_generics();
+        let trait_parameters = vec![quote! { 'borrow }, quote! { 'env }];
+        let trait_constraint = vec![quote! { 'env: 'borrow }];
+        let extra_type_bound = vec![quote! { jnix::IntoJava<'borrow, 'env> }];
+
+        let impl_generics = self.generics.impl_generics(trait_parameters.clone());
+        let trait_generics = self.generics.trait_generics(trait_parameters);
         let type_generics = self.generics.type_generics();
-        let where_clause = self.generics.where_clause();
+        let where_clause = self
+            .generics
+            .where_clause(trait_constraint, extra_type_bound);
 
         let jni_class_name = class_name.replace(".", "/");
         let jni_class_name_literal = LitStr::new(&jni_class_name, Span::call_site());
