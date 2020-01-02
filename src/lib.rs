@@ -81,4 +81,4 @@ mod jnix_env;
 
 pub use self::{as_jvalue::AsJValue, from_java::FromJava, into_java::IntoJava, jnix_env::JnixEnv};
 #[cfg(feature = "derive")]
-pub use jnix_macros::IntoJava;
+pub use jnix_macros::{FromJava, IntoJava};
