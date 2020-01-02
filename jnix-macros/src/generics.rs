@@ -78,15 +78,6 @@ impl ParsedGenerics {
         quote! { < #( #impl_parameters ),* > }
     }
 
-    pub fn trait_generics(
-        &self,
-        trait_parameters: impl IntoIterator<Item = TokenStream>,
-    ) -> TokenStream {
-        let trait_parameters = trait_parameters.into_iter();
-
-        quote! { < #( #trait_parameters ),* > }
-    }
-
     pub fn type_generics(&self) -> Option<TokenStream> {
         let parameters = &self.parameters;
 

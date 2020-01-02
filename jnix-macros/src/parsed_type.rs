@@ -60,7 +60,7 @@ impl ParsedType {
         let extra_type_bound = vec![quote! { jnix::IntoJava<'borrow, 'env> }];
 
         let impl_generics = self.generics.impl_generics(trait_parameters.clone());
-        let trait_generics = self.generics.trait_generics(trait_parameters);
+        let trait_generics = quote! { < #( #trait_parameters ),* > };
         let type_generics = self.generics.type_generics();
         let where_clause = self
             .generics
