@@ -43,6 +43,10 @@ impl ParsedType {
         let jni_class_name = class_name.replace(".", "/");
         let jni_class_name_literal = LitStr::new(&jni_class_name, Span::call_site());
 
+        let body = self
+            .data
+            .generate_from_java_body(&jni_class_name_literal, &class_name);
+
         quote! {
             impl #impl_generics jnix::FromJava #trait_generics for #type_name #type_generics
             #where_clause
@@ -53,7 +57,7 @@ impl ParsedType {
                     env: &jnix::JnixEnv<'env>,
                     source: jnix::jni::objects::JObject<'sub_env>,
                 ) -> Self {
-                    todo!();
+                    #body
                 }
             }
         }
@@ -131,6 +135,19 @@ impl TypeData {
             Data::Enum(data) => TypeData::Enum(ParsedVariants::new(data.variants)),
             Data::Struct(data) => TypeData::Struct(ParsedFields::new(data.fields, attributes)),
             Data::Union(_) => panic!("Dervie(IntoJava) not supported on unions"),
+        }
+    }
+
+    pub fn generate_from_java_body(
+        self,
+        jni_class_name_literal: &LitStr,
+        class_name: &str,
+    ) -> TokenStream {
+        match self {
+            TypeData::Enum(_) => todo!(),
+            TypeData::Struct(fields) => {
+                fields.generate_struct_from_java(jni_class_name_literal, class_name)
+            }
         }
     }
 
