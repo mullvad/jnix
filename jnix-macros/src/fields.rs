@@ -1,4 +1,5 @@
 use crate::{JnixAttributes, TypeParameters};
+use heck::MixedCase;
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
 use syn::{
@@ -168,6 +169,28 @@ impl ParsedFields {
         }
     }
 
+    pub fn generate_struct_from_java(
+        &self,
+        jni_class_name_literal: &LitStr,
+        class_name: &str,
+    ) -> TokenStream {
+        let names = self.original_bindings();
+        let constructor = self.generate_enum_variant_parameters();
+        let conversions = self.generate_from_java_conversions(class_name);
+        let class_binding = if self.fields.is_empty() {
+            quote! {}
+        } else {
+            quote! { let class = env.get_class(#jni_class_name_literal); }
+        };
+
+        quote! {
+            #class_binding
+            #( let #names = { #conversions }; )*
+
+            Self #constructor
+        }
+    }
+
     pub fn generate_struct_into_java(
         &self,
         jni_class_name_literal: &LitStr,
@@ -210,6 +233,40 @@ impl ParsedFields {
             #( let #source_bindings = #original_bindings; )*
             #conversion
         }
+    }
+
+    fn generate_from_java_conversions<'a, 'b: 'a>(
+        &'a self,
+        class_name: &'b str,
+    ) -> impl Iterator<Item = TokenStream> + 'a {
+        if let FieldType::Unnamed = self.field_type {
+            panic!("Can't derive FromJava for tuple structs");
+        }
+
+        self.fields.iter().map(move |field| {
+            let getter_name = format!("get_{}", field.name).to_mixed_case();
+            let getter_literal = LitStr::new(&getter_name, Span::call_site());
+            let field_type = field.get_type();
+
+            quote! {
+                let jni_signature =
+                    <#field_type as jnix::FromJava<jnix::jni::objects::JValue>>::JNI_SIGNATURE;
+
+                let method_signature = format!("(){}", jni_signature);
+                let method_id = env.get_method_id(&class, #getter_literal, &method_signature)
+                    .expect(
+                        concat!("Failed to get method ID for ", #class_name, "::", #getter_literal),
+                    );
+                let return_type = jni_signature.parse().unwrap_or_else(|_| {
+                    panic!("Invalid JNI signature: {}", jni_signature);
+                });
+
+                let java_value = env.call_method_unchecked(source, method_id, return_type, &[])
+                    .expect(concat!("Failed to call ", #class_name, "::", #getter_literal));
+
+                <#field_type as jnix::FromJava<_>>::from_java(env, java_value)
+            }
+        })
     }
 
     fn generate_into_java_conversion(

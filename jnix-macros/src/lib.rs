@@ -34,6 +34,49 @@ use syn::{parse_macro_input, DeriveInput};
 /// explicitly using an attribute, like so: `#[jnix(class_name = "my.package.MyClass"]`, or it can
 /// be derived from the Rust type name as long as the containing Java package is specified using an
 /// attribute, like so: `#[jnix(package = "my.package")]`.
+///
+/// # Structs
+///
+/// The generated `FromJava` implementation for a struct will construct the Rust type using values
+/// for the fields obtained using getter methods. Each field name is prefixed with `get_` before
+/// converted to mixed case (also known sometimes as camel case). Therefore, the source object must
+/// have the necessary getter methods for the Rust type to be constructed correctly.
+///
+/// # Examples
+///
+/// ## Structs with named fields
+///
+/// ```rust
+/// #[derive(FromJava)]
+/// #[jnix(package = "my.package")]
+/// pub struct MyClass {
+///     first_field: String,
+///     second_field: String,
+/// }
+/// ```
+///
+/// ```java
+/// package my.package;
+///
+/// public class MyClass {
+///     private String firstField;
+///     private String secondField;
+///
+///     public MyClass(String first, String second) {
+///         firstField = first;
+///         secondField = second;
+///     }
+///
+///     // The following getter methods are used to obtain the values to build the Rust struct.
+///     public String getFirstField() {
+///         firstField
+///     }
+///
+///     public String setSecondField() {
+///         secondField
+///     }
+/// }
+/// ```
 #[proc_macro_derive(FromJava, attributes(jnix))]
 pub fn derive_from_java(input: TokenStream) -> TokenStream {
     let parsed_type = ParsedType::new(parse_macro_input!(input as DeriveInput));
