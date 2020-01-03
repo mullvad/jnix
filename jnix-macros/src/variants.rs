@@ -37,13 +37,13 @@ impl ParsedVariants {
         type_parameters: &TypeParameters,
     ) -> TokenStream {
         let conversions = if self.enum_class {
-            self.generate_enum_class_conversions(
+            self.generate_enum_class_into_java_conversions(
                 jni_class_name_literal,
                 type_name_literal,
                 class_name,
             )
         } else {
-            self.generate_sealed_class_conversions(
+            self.generate_sealed_class_into_java_conversions(
                 jni_class_name_literal,
                 type_name_literal,
                 class_name,
@@ -69,7 +69,7 @@ impl ParsedVariants {
         }
     }
 
-    fn generate_enum_class_conversions(
+    fn generate_enum_class_into_java_conversions(
         &self,
         jni_class_name_literal: &LitStr,
         type_name_literal: &LitStr,
@@ -108,7 +108,7 @@ impl ParsedVariants {
             .collect()
     }
 
-    fn generate_sealed_class_conversions(
+    fn generate_sealed_class_into_java_conversions(
         &self,
         jni_class_name_literal: &LitStr,
         type_name_literal: &LitStr,
