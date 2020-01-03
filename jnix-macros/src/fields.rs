@@ -239,10 +239,6 @@ impl ParsedFields {
         &'a self,
         class_name: &'b str,
     ) -> impl Iterator<Item = TokenStream> + 'a {
-        if let FieldType::Unnamed = self.field_type {
-            panic!("Can't derive FromJava for tuple structs");
-        }
-
         self.fields.iter().map(move |field| {
             let getter_name = format!("get_{}", field.name).to_mixed_case();
             let getter_literal = LitStr::new(&getter_name, Span::call_site());

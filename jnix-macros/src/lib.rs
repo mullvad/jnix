@@ -41,6 +41,10 @@ use syn::{parse_macro_input, DeriveInput};
 /// for the fields obtained using getter methods. Each field name is prefixed with `get_` before
 /// converted to mixed case (also known sometimes as camel case). Therefore, the source object must
 /// have the necessary getter methods for the Rust type to be constructed correctly.
+///
+/// For tuple structs, since the fields don't have names, the field index starting from zero isr
+/// used as the name.  Therefore, the source object must have getter methods named `get0`, `get1`,
+/// `get2`, ..., `getN` for the "N" number of fields present in the Rust type.
 #[proc_macro_derive(FromJava, attributes(jnix))]
 pub fn derive_from_java(input: TokenStream) -> TokenStream {
     let parsed_type = ParsedType::new(parse_macro_input!(input as DeriveInput));
