@@ -1,3 +1,5 @@
+mod implementations;
+
 use crate::JnixEnv;
 
 /// Conversion from a Java type into its Rust equivalent.
