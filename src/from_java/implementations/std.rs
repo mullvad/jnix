@@ -56,3 +56,35 @@ where
         String::from_java(env, JString::from(source))
     }
 }
+
+impl<'env, 'sub_env, T> FromJava<'env, JObject<'sub_env>> for Option<T>
+where
+    'env: 'sub_env,
+    T: FromJava<'env, JObject<'sub_env>>,
+{
+    const JNI_SIGNATURE: &'static str = T::JNI_SIGNATURE;
+
+    fn from_java(env: &JnixEnv<'env>, source: JObject<'sub_env>) -> Self {
+        if source.is_null() {
+            None
+        } else {
+            Some(T::from_java(env, source))
+        }
+    }
+}
+
+impl<'env, 'sub_env, T> FromJava<'env, JString<'sub_env>> for Option<T>
+where
+    'env: 'sub_env,
+    T: FromJava<'env, JString<'sub_env>>,
+{
+    const JNI_SIGNATURE: &'static str = T::JNI_SIGNATURE;
+
+    fn from_java(env: &JnixEnv<'env>, source: JString<'sub_env>) -> Self {
+        if source.is_null() {
+            None
+        } else {
+            Some(T::from_java(env, source))
+        }
+    }
+}
