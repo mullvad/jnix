@@ -1,5 +1,5 @@
 use crate::{FromJava, JnixEnv};
-use jni::objects::{AutoLocal, JObject, JValue};
+use jni::objects::{AutoLocal, JObject, JString, JValue};
 
 impl<'env, 'sub_env, T> FromJava<'env, JValue<'sub_env>> for T
 where
@@ -29,5 +29,30 @@ where
 
     fn from_java(env: &JnixEnv<'env>, source: AutoLocal<'sub_env, 'borrow>) -> Self {
         T::from_java(env, source.as_obj())
+    }
+}
+
+impl<'env, 'sub_env> FromJava<'env, JString<'sub_env>> for String
+where
+    'env: 'sub_env,
+{
+    const JNI_SIGNATURE: &'static str = "Ljava/lang/String;";
+
+    fn from_java(env: &JnixEnv<'env>, source: JString<'sub_env>) -> Self {
+        String::from(
+            env.get_string(source)
+                .expect("Failed to convert from Java String"),
+        )
+    }
+}
+
+impl<'env, 'sub_env> FromJava<'env, JObject<'sub_env>> for String
+where
+    'env: 'sub_env,
+{
+    const JNI_SIGNATURE: &'static str = "Ljava/lang/String;";
+
+    fn from_java(env: &JnixEnv<'env>, source: JObject<'sub_env>) -> Self {
+        String::from_java(env, JString::from(source))
     }
 }
