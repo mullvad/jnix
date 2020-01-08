@@ -28,14 +28,24 @@ impl ParsedType {
 
         let type_name = self.type_name;
 
+        let trait_parameters = vec![quote! { 'env }, quote! { 'sub_env }];
+        let trait_constraint = vec![quote! { 'env: 'sub_env }];
+        let extra_type_bound =
+            vec![quote! { jnix::FromJava<'env, jnix::jni::objects::JValue<'sub_env>> }];
+
+        let impl_generics = self.generics.impl_generics(trait_parameters.clone());
+        let trait_generics = quote! { <'env, jnix::jni::objects::JObject<'sub_env>> };
+        let type_generics = self.generics.type_generics();
+        let where_clause = self
+            .generics
+            .where_clause(trait_constraint, extra_type_bound);
+
         let jni_class_name = class_name.replace(".", "/");
         let jni_class_name_literal = LitStr::new(&jni_class_name, Span::call_site());
 
         quote! {
-            impl<'env, 'sub_env> jnix::FromJava<'env, jnix::jni::objects::JObject<'sub_env>>
-                for #type_name
-            where
-                'env: 'sub_env,
+            impl #impl_generics jnix::FromJava #trait_generics for #type_name #type_generics
+            #where_clause
             {
                 const JNI_SIGNATURE: &'static str = concat!("L", #jni_class_name_literal, ";");
 
