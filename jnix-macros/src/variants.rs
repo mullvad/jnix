@@ -6,6 +6,7 @@ use syn::{punctuated::Punctuated, Ident, LitStr, Token, Variant};
 pub struct ParsedVariant {
     pub name: Ident,
     pub fields: ParsedFields,
+    pub attributes: JnixAttributes,
 }
 
 impl From<Variant> for ParsedVariant {
@@ -13,6 +14,7 @@ impl From<Variant> for ParsedVariant {
         ParsedVariant {
             name: variant.ident,
             fields: ParsedFields::new(variant.fields, &JnixAttributes::empty()),
+            attributes: JnixAttributes::new(&variant.attrs),
         }
     }
 }
@@ -124,6 +126,16 @@ impl ParsedVariants {
             let variant_name_literal = LitStr::new(&variant_name.to_string(), span);
             let variant_class_name = LitStr::new(&format!("{}.{}", class_name, variant_name), span);
 
+            let constructor = if variant.attributes.has_flag("deny") {
+                quote! {
+                    panic!(
+                        concat!("Can't create variant ", #variant_name_literal, " from Java type"),
+                    );
+                }
+            } else {
+                quote! { Some(Self::#variant_name) }
+            };
+
             quote! {
                 let candidate = env
                     .get_static_field(
@@ -143,7 +155,7 @@ impl ParsedVariants {
                             ));
 
                         if found {
-                            Some(Self::#variant_name)
+                            #constructor
                         } else {
                             None
                         }
@@ -176,6 +188,7 @@ impl ParsedVariants {
         let jni_class_name = jni_class_name_literal.value();
 
         Box::new(self.variants.iter().map(move |variant| {
+            let variant_name_literal = LitStr::new(&variant.name.to_string(), variant.name.span());
             let variant_class_name = format!("{}.{}", class_name, variant.name);
             let variant_class_name_literal = LitStr::new(&variant_class_name, variant.name.span());
 
@@ -183,12 +196,22 @@ impl ParsedVariants {
             let variant_jni_class_name_literal =
                 LitStr::new(&variant_jni_class_name, Span::call_site());
 
-            let constructor = variant.fields.generate_enum_variant_from_java(
-                &variant_jni_class_name_literal,
-                &variant_class_name,
-                &variant.name,
-                type_parameters,
-            );
+            let constructor = if variant.attributes.has_flag("deny") {
+                quote! {
+                    panic!(
+                        concat!("Can't create variant ", #variant_name_literal, " from Java type"),
+                    );
+                }
+            } else {
+                let fields_constructor = variant.fields.generate_enum_variant_from_java(
+                    &variant_jni_class_name_literal,
+                    &variant_class_name,
+                    &variant.name,
+                    type_parameters,
+                );
+
+                quote! { Some({ #fields_constructor }) }
+            };
 
             quote! {
                 let candidate = env.get_class(#variant_jni_class_name_literal);
@@ -199,7 +222,7 @@ impl ParsedVariants {
                     ));
 
                 if found {
-                    Some({ #constructor })
+                    #constructor
                 } else {
                     None
                 }
