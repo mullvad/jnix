@@ -43,9 +43,11 @@ impl ParsedType {
         let jni_class_name = class_name.replace(".", "/");
         let jni_class_name_literal = LitStr::new(&jni_class_name, Span::call_site());
 
-        let body = self
-            .data
-            .generate_from_java_body(&jni_class_name_literal, &class_name);
+        let body = self.data.generate_from_java_body(
+            &jni_class_name_literal,
+            &class_name,
+            &self.generics.type_parameters(),
+        );
 
         quote! {
             impl #impl_generics jnix::FromJava #trait_generics for #type_name #type_generics
@@ -142,12 +144,15 @@ impl TypeData {
         self,
         jni_class_name_literal: &LitStr,
         class_name: &str,
+        type_parameters: &TypeParameters,
     ) -> TokenStream {
         match self {
             TypeData::Enum(_) => todo!(),
-            TypeData::Struct(fields) => {
-                fields.generate_struct_from_java(jni_class_name_literal, class_name)
-            }
+            TypeData::Struct(fields) => fields.generate_struct_from_java(
+                jni_class_name_literal,
+                class_name,
+                type_parameters,
+            ),
         }
     }
 
