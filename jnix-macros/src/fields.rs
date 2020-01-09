@@ -272,33 +272,38 @@ impl ParsedFields {
         type_parameters: &'c TypeParameters,
     ) -> impl Iterator<Item = TokenStream> + 'a {
         self.fields.iter().map(move |field| {
-            let getter_name = format!("get_{}", field.name).to_mixed_case();
-            let getter_literal = LitStr::new(&getter_name, Span::call_site());
             let field_type = field.get_type();
 
-            let jni_signature = if type_parameters.is_used_in_type(&field_type) {
-                quote! { "Ljava/lang/Object;" }
+            if field.attributes.has_flag("default") {
+                quote! { <#field_type as std::default::Default>::default() }
             } else {
+                let getter_name = format!("get_{}", field.name).to_mixed_case();
+                let getter_literal = LitStr::new(&getter_name, Span::call_site());
+
+                let jni_signature = if type_parameters.is_used_in_type(&field_type) {
+                    quote! { "Ljava/lang/Object;" }
+                } else {
+                    quote! {
+                        <#field_type as jnix::FromJava<jnix::jni::objects::JValue>>::JNI_SIGNATURE
+                    }
+                };
+
                 quote! {
-                    <#field_type as jnix::FromJava<jnix::jni::objects::JValue>>::JNI_SIGNATURE
+                    let jni_signature = #jni_signature;
+                    let method_signature = format!("(){}", jni_signature);
+                    let method_id = env.get_method_id(&class, #getter_literal, &method_signature)
+                        .expect(concat!(
+                            "Failed to get method ID for ", #class_name, "::", #getter_literal
+                        ));
+                    let return_type = jni_signature.parse().unwrap_or_else(|_| {
+                        panic!("Invalid JNI signature: {}", jni_signature);
+                    });
+
+                    let java_value = env.call_method_unchecked(source, method_id, return_type, &[])
+                        .expect(concat!("Failed to call ", #class_name, "::", #getter_literal));
+
+                    <#field_type as jnix::FromJava<_>>::from_java(env, java_value)
                 }
-            };
-
-            quote! {
-                let jni_signature = #jni_signature;
-                let method_signature = format!("(){}", jni_signature);
-                let method_id = env.get_method_id(&class, #getter_literal, &method_signature)
-                    .expect(
-                        concat!("Failed to get method ID for ", #class_name, "::", #getter_literal),
-                    );
-                let return_type = jni_signature.parse().unwrap_or_else(|_| {
-                    panic!("Invalid JNI signature: {}", jni_signature);
-                });
-
-                let java_value = env.call_method_unchecked(source, method_id, return_type, &[])
-                    .expect(concat!("Failed to call ", #class_name, "::", #getter_literal));
-
-                <#field_type as jnix::FromJava<_>>::from_java(env, java_value)
             }
         })
     }
