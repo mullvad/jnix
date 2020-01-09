@@ -3,28 +3,32 @@ use proc_macro2::{Span, TokenStream};
 use quote::quote;
 use syn::{punctuated::Punctuated, Ident, LitStr, Token, Variant};
 
+pub struct ParsedVariant {
+    pub name: Ident,
+    pub fields: ParsedFields,
+}
+
+impl From<Variant> for ParsedVariant {
+    fn from(variant: Variant) -> Self {
+        ParsedVariant {
+            name: variant.ident,
+            fields: ParsedFields::new(variant.fields, &JnixAttributes::empty()),
+        }
+    }
+}
+
 pub struct ParsedVariants {
-    names: Vec<Ident>,
-    fields: Vec<ParsedFields>,
+    variants: Vec<ParsedVariant>,
     enum_class: bool,
 }
 
 impl ParsedVariants {
     pub fn new(variants: Punctuated<Variant, Token![,]>) -> Self {
-        let size = variants.iter().count();
-        let mut names = Vec::with_capacity(size);
-        let mut fields = Vec::with_capacity(size);
-
-        for variant in variants {
-            names.push(variant.ident);
-            fields.push(ParsedFields::new(variant.fields, &JnixAttributes::empty()));
-        }
-
-        let only_has_unit_fields = fields.iter().all(ParsedFields::is_unit);
+        let variants: Vec<_> = variants.into_iter().map(ParsedVariant::from).collect();
+        let only_has_unit_fields = variants.iter().all(|variant| variant.fields.is_unit());
 
         ParsedVariants {
-            names,
-            fields,
+            variants,
             enum_class: only_has_unit_fields,
         }
     }
@@ -88,11 +92,11 @@ impl ParsedVariants {
         };
 
         let parameters = self
-            .fields
+            .variants
             .iter()
-            .map(|field| field.generate_enum_variant_parameters());
+            .map(|variant| variant.fields.generate_enum_variant_parameters());
 
-        let variants = self.names;
+        let variants = self.variants.iter().map(|variant| &variant.name);
 
         quote! {
             match self {
@@ -114,10 +118,11 @@ impl ParsedVariants {
         'jni_class_name_literal: 'borrow,
         'class_name: 'borrow,
     {
-        Box::new(self.names.iter().map(move |variant| {
-            let variant_name_literal = LitStr::new(&variant.to_string(), variant.span());
-            let variant_class_name =
-                LitStr::new(&format!("{}.{}", class_name, variant), variant.span());
+        Box::new(self.variants.iter().map(move |variant| {
+            let variant_name = &variant.name;
+            let span = variant_name.span();
+            let variant_name_literal = LitStr::new(&variant_name.to_string(), span);
+            let variant_class_name = LitStr::new(&format!("{}.{}", class_name, variant_name), span);
 
             quote! {
                 let candidate = env
@@ -138,7 +143,7 @@ impl ParsedVariants {
                             ));
 
                         if found {
-                            Some(Self::#variant)
+                            Some(Self::#variant_name)
                         } else {
                             None
                         }
@@ -170,39 +175,36 @@ impl ParsedVariants {
     {
         let jni_class_name = jni_class_name_literal.value();
 
-        Box::new(self.names.iter().zip(self.fields.iter()).map(
-            move |(variant_name, variant_fields)| {
-                let variant_class_name = format!("{}.{}", class_name, variant_name);
-                let variant_class_name_literal =
-                    LitStr::new(&variant_class_name, variant_name.span());
+        Box::new(self.variants.iter().map(move |variant| {
+            let variant_class_name = format!("{}.{}", class_name, variant.name);
+            let variant_class_name_literal = LitStr::new(&variant_class_name, variant.name.span());
 
-                let variant_jni_class_name = format!("{}${}", jni_class_name, variant_name);
-                let variant_jni_class_name_literal =
-                    LitStr::new(&variant_jni_class_name, Span::call_site());
+            let variant_jni_class_name = format!("{}${}", jni_class_name, variant.name);
+            let variant_jni_class_name_literal =
+                LitStr::new(&variant_jni_class_name, Span::call_site());
 
-                let constructor = variant_fields.generate_enum_variant_from_java(
-                    &variant_jni_class_name_literal,
-                    &variant_class_name,
-                    variant_name,
-                    type_parameters,
-                );
+            let constructor = variant.fields.generate_enum_variant_from_java(
+                &variant_jni_class_name_literal,
+                &variant_class_name,
+                &variant.name,
+                type_parameters,
+            );
 
-                quote! {
-                    let candidate = env.get_class(#variant_jni_class_name_literal);
-                    let found = env.is_instance_of(source, &candidate)
-                        .expect(concat!(
-                            "Failed to check if object is an instance of class ",
-                            #variant_class_name_literal,
-                        ));
+            quote! {
+                let candidate = env.get_class(#variant_jni_class_name_literal);
+                let found = env.is_instance_of(source, &candidate)
+                    .expect(concat!(
+                        "Failed to check if object is an instance of class ",
+                        #variant_class_name_literal,
+                    ));
 
-                    if found {
-                        Some({ #constructor })
-                    } else {
-                        None
-                    }
+                if found {
+                    Some({ #constructor })
+                } else {
+                    None
                 }
-            },
-        ))
+            }
+        }))
     }
 
     fn generate_enum_class_into_java_conversions(
@@ -211,11 +213,11 @@ impl ParsedVariants {
         type_name_literal: &LitStr,
         class_name: &str,
     ) -> Vec<TokenStream> {
-        self.names
+        self.variants
             .iter()
-            .map(|variant_name| {
+            .map(|variant| {
                 let variant_name_literal =
-                    LitStr::new(&variant_name.to_string(), Span::call_site());
+                    LitStr::new(&variant.name.to_string(), Span::call_site());
 
                 quote! {
                     let class = env.get_class(#jni_class_name_literal);
@@ -254,20 +256,19 @@ impl ParsedVariants {
         let jni_class_name = jni_class_name_literal.value();
         let type_name = type_name_literal.value();
 
-        self.names
+        self.variants
             .iter()
-            .zip(self.fields.iter())
-            .map(|(variant_name, fields)| {
-                let variant_class_name = format!("{}.{}", class_name, variant_name);
+            .map(|variant| {
+                let variant_class_name = format!("{}.{}", class_name, variant.name);
 
-                let variant_jni_class_name = format!("{}${}", jni_class_name, variant_name);
+                let variant_jni_class_name = format!("{}${}", jni_class_name, variant.name);
                 let variant_jni_class_name_literal =
                     LitStr::new(&variant_jni_class_name, Span::call_site());
 
-                let variant_type_name = format!("{}::{}", type_name, variant_name);
+                let variant_type_name = format!("{}::{}", type_name, variant.name);
                 let variant_type_name_literal = LitStr::new(&variant_type_name, Span::call_site());
 
-                fields.generate_enum_variant_into_java(
+                variant.fields.generate_enum_variant_into_java(
                     &variant_jni_class_name_literal,
                     &variant_type_name_literal,
                     &variant_class_name,
