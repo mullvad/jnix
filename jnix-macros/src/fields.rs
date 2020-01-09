@@ -173,10 +173,11 @@ impl ParsedFields {
         &self,
         jni_class_name_literal: &LitStr,
         class_name: &str,
+        type_parameters: &TypeParameters,
     ) -> TokenStream {
         let names = self.original_bindings();
         let constructor = self.generate_enum_variant_parameters();
-        let conversions = self.generate_from_java_conversions(class_name);
+        let conversions = self.generate_from_java_conversions(class_name, type_parameters);
         let class_binding = if self.fields.is_empty() {
             quote! {}
         } else {
@@ -235,19 +236,26 @@ impl ParsedFields {
         }
     }
 
-    fn generate_from_java_conversions<'a, 'b: 'a>(
+    fn generate_from_java_conversions<'a, 'b: 'a, 'c: 'a>(
         &'a self,
         class_name: &'b str,
+        type_parameters: &'c TypeParameters,
     ) -> impl Iterator<Item = TokenStream> + 'a {
         self.fields.iter().map(move |field| {
             let getter_name = format!("get_{}", field.name).to_mixed_case();
             let getter_literal = LitStr::new(&getter_name, Span::call_site());
             let field_type = field.get_type();
 
-            quote! {
-                let jni_signature =
-                    <#field_type as jnix::FromJava<jnix::jni::objects::JValue>>::JNI_SIGNATURE;
+            let jni_signature = if type_parameters.is_used_in_type(&field_type) {
+                quote! { "Ljava/lang/Object;" }
+            } else {
+                quote! {
+                    <#field_type as jnix::FromJava<jnix::jni::objects::JValue>>::JNI_SIGNATURE
+                }
+            };
 
+            quote! {
+                let jni_signature = #jni_signature;
                 let method_signature = format!("(){}", jni_signature);
                 let method_id = env.get_method_id(&class, #getter_literal, &method_signature)
                     .expect(
