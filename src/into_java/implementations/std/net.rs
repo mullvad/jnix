@@ -10,12 +10,9 @@ fn ipvx_addr_into_java<'borrow, 'env: 'borrow>(
     original_octets: &[u8],
     env: &'borrow JnixEnv<'env>,
 ) -> AutoLocal<'env, 'borrow> {
+    let class = env.get_class("java/net/InetAddress");
     let constructor = env
-        .get_static_method_id(
-            "java/net/InetAddress",
-            "getByAddress",
-            "([B)Ljava/net/InetAddress;",
-        )
+        .get_static_method_id(&class, "getByAddress", "([B)Ljava/net/InetAddress;")
         .expect("Failed to get InetAddress.getByAddress method ID");
 
     let octets_array = env
