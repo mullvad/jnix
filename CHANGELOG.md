@@ -23,3 +23,4 @@ Line wrap the file at 100 characters. That is over here: -----------------------
 ## [Unreleased]
 ### Fixed
 - Fix skipping fields in tuple structs and tuple enum variants when deriving `IntoJava`.
+- Fix local reference leak when calling `.into_java(env)` on an `IpAddr`, `Ipv4Addr` or `Ipv6Addr`.
