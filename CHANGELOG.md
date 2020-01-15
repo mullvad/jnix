@@ -21,3 +21,5 @@ Line wrap the file at 100 characters. That is over here: -----------------------
 - **Security**: in case of vulnerabilities.
 
 ## [Unreleased]
+### Fixed
+- Fix skipping fields in tuple structs and tuple enum variants when deriving `IntoJava`.
