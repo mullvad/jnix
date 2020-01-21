@@ -21,6 +21,9 @@ Line wrap the file at 100 characters. That is over here: -----------------------
 - **Security**: in case of vulnerabilities.
 
 ## [Unreleased]
+### Fixed
+- Fix another instance of a local reference leak when calling `.into_java(env)` on an `IpAddr`,
+  `Ipv4Addr` or `Ipv6Addr`.
 
 ## [0.1.1] - 2020-01-15
 ### Fixed
