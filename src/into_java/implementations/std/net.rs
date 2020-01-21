@@ -30,7 +30,7 @@ fn ipvx_addr_into_java<'borrow, 'env: 'borrow>(
     let octets = env.auto_local(JObject::from(octets_array));
     let result = env
         .call_static_method_unchecked(
-            "java/net/InetAddress",
+            &class,
             constructor,
             JavaType::Object("java/net/InetAddress".to_owned()),
             &[octets.as_jvalue()],
