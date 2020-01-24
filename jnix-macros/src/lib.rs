@@ -42,6 +42,10 @@ use syn::{parse_macro_input, DeriveInput};
 /// converted to mixed case (also known sometimes as camel case). Therefore, the source object must
 /// have the necessary getter methods for the Rust type to be constructed correctly.
 ///
+/// For tuple structs, since the fields don't have names, the field index starting from zero isr
+/// used as the name.  Therefore, the source object must have getter methods named `get0`, `get1`,
+/// `get2`, ..., `getN` for the "N" number of fields present in the Rust type.
+///
 /// # Examples
 ///
 /// ## Structs with named fields
@@ -73,6 +77,38 @@ use syn::{parse_macro_input, DeriveInput};
 ///     }
 ///
 ///     public String setSecondField() {
+///         secondField
+///     }
+/// }
+/// ```
+///
+/// ## Tuple structs
+///
+/// ```rust
+/// #[derive(FromJava)]
+/// #[jnix(class_name = "my.package.CustomClass")]
+/// pub struct MyTupleStruct(String, String);
+/// ```
+///
+/// ```java
+/// package my.package;
+///
+/// public class CustomClass {
+///     private String firstField;
+///     private String secondField;
+///
+///     public MyClass(String first, String second) {
+///         firstField = first;
+///         secondField = second;
+///     }
+///
+///     // The following getter methods are used to obtain the values to build the Rust tuple
+///     // struct.
+///     public String get0() {
+///         firstField
+///     }
+///
+///     public String set1() {
 ///         secondField
 ///     }
 /// }
