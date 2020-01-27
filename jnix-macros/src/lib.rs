@@ -46,6 +46,14 @@ use syn::{parse_macro_input, DeriveInput};
 /// used as the name.  Therefore, the source object must have getter methods named `get0`, `get1`,
 /// `get2`, ..., `getN` for the "N" number of fields present in the Rust type.
 ///
+/// # Enums
+///
+/// The generate `FromJava` implementation for an enum that only has unit variants (i.e, no tuple
+/// or struct variants) assumes that the source object is an instance of an `enum class`. The
+/// source reference is compared to the static fields representing the entries of the `enum class`,
+/// and once an entry is found matching the source reference, the respective variant is
+/// constructed.
+///
 /// # Examples
 ///
 /// ## Structs with named fields
@@ -111,6 +119,25 @@ use syn::{parse_macro_input, DeriveInput};
 ///     public String set1() {
 ///         return secondField;
 ///     }
+/// }
+/// ```
+///
+/// ## Simple enums
+///
+/// ```rust
+/// #[derive(FromJava)]
+/// #[jnix(package "my.package")]
+/// pub enum SimpleEnum {
+///     First,
+///     Second,
+/// }
+/// ```
+///
+/// ```java
+/// package my.package;
+///
+/// public enum SimpleEnum {
+///     First, Second
 /// }
 /// ```
 #[proc_macro_derive(FromJava, attributes(jnix))]

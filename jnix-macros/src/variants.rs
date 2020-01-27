@@ -29,6 +29,29 @@ impl ParsedVariants {
         }
     }
 
+    pub fn generate_enum_from_java(
+        self,
+        jni_class_name_literal: &LitStr,
+        class_name: &str,
+    ) -> TokenStream {
+        if !self.enum_class {
+            todo!();
+        }
+
+        let conversions =
+            self.generate_enum_class_from_java_conversions(jni_class_name_literal, class_name);
+
+        quote! {
+            let class = env.get_class(#jni_class_name_literal);
+
+            None
+                #( .or_else(|| { #conversions }) )*
+                .unwrap_or_else(|| panic!(
+                    concat!("Invalid Java enum class entry of ", #jni_class_name_literal),
+                ))
+        }
+    }
+
     pub fn generate_enum_into_java(
         self,
         jni_class_name_literal: &LitStr,
@@ -67,6 +90,53 @@ impl ParsedVariants {
                 )*
             }
         }
+    }
+
+    fn generate_enum_class_from_java_conversions<'borrow, 'jni_class_name_literal, 'class_name>(
+        &'borrow self,
+        jni_class_name_literal: &'jni_class_name_literal LitStr,
+        class_name: &'class_name str,
+    ) -> impl Iterator<Item = TokenStream> + 'borrow
+    where
+        'jni_class_name_literal: 'borrow,
+        'class_name: 'borrow,
+    {
+        self.names.iter().map(move |variant| {
+            let variant_name_literal = LitStr::new(&variant.to_string(), variant.span());
+            let variant_class_name =
+                LitStr::new(&format!("{}.{}", class_name, variant), variant.span());
+
+            quote! {
+                let candidate = env
+                    .get_static_field(
+                        &class,
+                        #variant_name_literal,
+                        concat!("L", #jni_class_name_literal, ";"),
+                    )
+                    .expect(concat!("Failed to get Java enum class variant ", #variant_class_name));
+
+                match candidate {
+                    jnix::jni::objects::JValue::Object(candidate) => {
+                        let found = env
+                            .is_same_object(source, candidate)
+                            .expect(concat!(
+                                "Failed to compare object to enum class entry of ",
+                                #variant_class_name,
+                            ));
+
+                        if found {
+                            Some(Self::#variant)
+                        } else {
+                            None
+                        }
+                    }
+                    _ => panic!(concat!(
+                        "Invalid Java enum class variant retrieved for ",
+                        #variant_class_name,
+                    )),
+                }
+            }
+        })
     }
 
     fn generate_enum_class_into_java_conversions(
