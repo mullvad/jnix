@@ -33,21 +33,34 @@ impl ParsedVariants {
         self,
         jni_class_name_literal: &LitStr,
         class_name: &str,
+        type_parameters: &TypeParameters,
     ) -> TokenStream {
-        if !self.enum_class {
-            todo!();
-        }
+        let (class_binding, error_description, conversions) = if self.enum_class {
+            let class_binding = quote! { let class = env.get_class(#jni_class_name_literal); };
+            let error_description = "Java enum class entry";
+            let conversions =
+                self.generate_enum_class_from_java_conversions(jni_class_name_literal, class_name);
 
-        let conversions =
-            self.generate_enum_class_from_java_conversions(jni_class_name_literal, class_name);
+            (class_binding, error_description, conversions)
+        } else {
+            let class_binding = quote! {};
+            let error_description = "sub-class";
+            let conversions = self.generate_sealed_class_from_java_conversions(
+                jni_class_name_literal,
+                class_name,
+                type_parameters,
+            );
+
+            (class_binding, error_description, conversions)
+        };
 
         quote! {
-            let class = env.get_class(#jni_class_name_literal);
+            #class_binding
 
             None
                 #( .or_else(|| { #conversions }) )*
                 .unwrap_or_else(|| panic!(
-                    concat!("Invalid Java enum class entry of ", #jni_class_name_literal),
+                    concat!("Invalid ", #error_description, " of ", #jni_class_name_literal),
                 ))
         }
     }
@@ -96,12 +109,12 @@ impl ParsedVariants {
         &'borrow self,
         jni_class_name_literal: &'jni_class_name_literal LitStr,
         class_name: &'class_name str,
-    ) -> impl Iterator<Item = TokenStream> + 'borrow
+    ) -> Box<dyn Iterator<Item = TokenStream> + 'borrow>
     where
         'jni_class_name_literal: 'borrow,
         'class_name: 'borrow,
     {
-        self.names.iter().map(move |variant| {
+        Box::new(self.names.iter().map(move |variant| {
             let variant_name_literal = LitStr::new(&variant.to_string(), variant.span());
             let variant_class_name =
                 LitStr::new(&format!("{}.{}", class_name, variant), variant.span());
@@ -136,7 +149,60 @@ impl ParsedVariants {
                     )),
                 }
             }
-        })
+        }))
+    }
+
+    fn generate_sealed_class_from_java_conversions<
+        'borrow,
+        'jni_class_name_literal,
+        'class_name,
+        'type_parameters,
+    >(
+        &'borrow self,
+        jni_class_name_literal: &'jni_class_name_literal LitStr,
+        class_name: &'class_name str,
+        type_parameters: &'type_parameters TypeParameters,
+    ) -> Box<dyn Iterator<Item = TokenStream> + 'borrow>
+    where
+        'jni_class_name_literal: 'borrow,
+        'class_name: 'borrow,
+        'type_parameters: 'borrow,
+    {
+        let jni_class_name = jni_class_name_literal.value();
+
+        Box::new(self.names.iter().zip(self.fields.iter()).map(
+            move |(variant_name, variant_fields)| {
+                let variant_class_name = format!("{}.{}", class_name, variant_name);
+                let variant_class_name_literal =
+                    LitStr::new(&variant_class_name, variant_name.span());
+
+                let variant_jni_class_name = format!("{}${}", jni_class_name, variant_name);
+                let variant_jni_class_name_literal =
+                    LitStr::new(&variant_jni_class_name, Span::call_site());
+
+                let constructor = variant_fields.generate_enum_variant_from_java(
+                    &variant_jni_class_name_literal,
+                    &variant_class_name,
+                    variant_name,
+                    type_parameters,
+                );
+
+                quote! {
+                    let candidate = env.get_class(#variant_jni_class_name_literal);
+                    let found = env.is_instance_of(source, &candidate)
+                        .expect(concat!(
+                            "Failed to check if object is an instance of class ",
+                            #variant_class_name_literal,
+                        ));
+
+                    if found {
+                        Some({ #constructor })
+                    } else {
+                        None
+                    }
+                }
+            },
+        ))
     }
 
     fn generate_enum_class_into_java_conversions(

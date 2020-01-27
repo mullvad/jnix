@@ -175,21 +175,27 @@ impl ParsedFields {
         class_name: &str,
         type_parameters: &TypeParameters,
     ) -> TokenStream {
-        let names = self.original_bindings();
-        let constructor = self.generate_enum_variant_parameters();
-        let conversions = self.generate_from_java_conversions(class_name, type_parameters);
-        let class_binding = if self.fields.is_empty() {
-            quote! {}
-        } else {
-            quote! { let class = env.get_class(#jni_class_name_literal); }
-        };
+        self.generate_from_java(
+            jni_class_name_literal,
+            class_name,
+            type_parameters,
+            quote! { Self },
+        )
+    }
 
-        quote! {
-            #class_binding
-            #( let #names = { #conversions }; )*
-
-            Self #constructor
-        }
+    pub fn generate_enum_variant_from_java(
+        &self,
+        jni_class_name_literal: &LitStr,
+        class_name: &str,
+        variant: &Ident,
+        type_parameters: &TypeParameters,
+    ) -> TokenStream {
+        self.generate_from_java(
+            jni_class_name_literal,
+            class_name,
+            type_parameters,
+            quote! { Self::#variant },
+        )
     }
 
     pub fn generate_struct_into_java(
@@ -233,6 +239,30 @@ impl ParsedFields {
         quote! {
             #( let #source_bindings = #original_bindings; )*
             #conversion
+        }
+    }
+
+    fn generate_from_java(
+        &self,
+        jni_class_name_literal: &LitStr,
+        class_name: &str,
+        type_parameters: &TypeParameters,
+        constructor_name: TokenStream,
+    ) -> TokenStream {
+        let names = self.original_bindings();
+        let constructor = self.generate_enum_variant_parameters();
+        let conversions = self.generate_from_java_conversions(class_name, type_parameters);
+        let class_binding = if self.fields.is_empty() {
+            quote! {}
+        } else {
+            quote! { let class = env.get_class(#jni_class_name_literal); }
+        };
+
+        quote! {
+            #class_binding
+            #( let #names = { #conversions }; )*
+
+            #constructor_name #constructor
         }
     }
 

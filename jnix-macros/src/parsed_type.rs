@@ -147,9 +147,11 @@ impl TypeData {
         type_parameters: &TypeParameters,
     ) -> TokenStream {
         match self {
-            TypeData::Enum(variants) => {
-                variants.generate_enum_from_java(jni_class_name_literal, class_name)
-            }
+            TypeData::Enum(variants) => variants.generate_enum_from_java(
+                jni_class_name_literal,
+                class_name,
+                type_parameters,
+            ),
             TypeData::Struct(fields) => fields.generate_struct_from_java(
                 jni_class_name_literal,
                 class_name,

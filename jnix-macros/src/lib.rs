@@ -54,6 +54,13 @@ use syn::{parse_macro_input, DeriveInput};
 /// and once an entry is found matching the source reference, the respective variant is
 /// constructed.
 ///
+/// When an enum has at least one tuple or struct variant, the generated `FromJava` implementation
+/// will assume that that there is a class hierarchy to represent the type. The source Java class
+/// is assumed to be the super class, and a nested static class for each variant is assumed to be
+/// declared in that super class. The source object is checked to see which of the sub-classes it
+/// is an instance of. Once a sub-class is found, the respective variant is created similarly to
+/// how a struct is constructed, so the same rules regarding the presence of getter methods apply.
+///
 /// # Examples
 ///
 /// ## Structs with named fields
@@ -138,6 +145,55 @@ use syn::{parse_macro_input, DeriveInput};
 ///
 /// public enum SimpleEnum {
 ///     First, Second
+/// }
+/// ```
+///
+/// ## Enums with fields
+///
+/// ```rust
+/// #[derive(FromJava)]
+/// #[jnix(package "my.package")]
+/// pub enum ComplexEnum {
+///     First {
+///         name: String,
+///     },
+///     Second(String, String),
+/// }
+/// ```
+///
+/// ```java
+/// package my.package;
+///
+/// public class ComplexEnum {
+///     public static class First extends ComplexEnum {
+///         private String name;
+///
+///         public First(String name) {
+///             this.name = name;
+///         }
+///
+///         public String getName() {
+///             return name;
+///         }
+///     }
+///
+///     public static class Second extends ComplexEnum {
+///         private String a;
+///         private String b;
+///
+///         public Second(String a, String b) {
+///             this.a = a;
+///             this.b = b;
+///         }
+///
+///         public String get0() {
+///             return a;
+///         }
+///
+///         public String get1() {
+///             return b;
+///         }
+///     }
 /// }
 /// ```
 #[proc_macro_derive(FromJava, attributes(jnix))]
