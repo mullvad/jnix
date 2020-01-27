@@ -24,9 +24,105 @@ use crate::{
 use proc_macro::TokenStream;
 use syn::{parse_macro_input, DeriveInput};
 
+/// Derives `FromJava` for a type.
+///
+/// More specifically, `FromJava<'env, JObject<'sub_env>>` is derived for the type. This also makes
+/// available a `FromJava<'env, AutoLocal<'sub_env, 'borrow>>` implementation through a blanket
+/// implementation.
+///
+/// The name of the target Java class must be known for code generation. Either it can be specified
+/// explicitly using an attribute, like so: `#[jnix(class_name = "my.package.MyClass"]`, or it can
+/// be derived from the Rust type name as long as the containing Java package is specified using an
+/// attribute, like so: `#[jnix(package = "my.package")]`.
+///
+/// # Structs
+///
+/// The generated `FromJava` implementation for a struct will construct the Rust type using values
+/// for the fields obtained using getter methods. Each field name is prefixed with `get_` before
+/// converted to mixed case (also known sometimes as camel case). Therefore, the source object must
+/// have the necessary getter methods for the Rust type to be constructed correctly.
+///
+/// For tuple structs, since the fields don't have names, the field index starting from zero isr
+/// used as the name.  Therefore, the source object must have getter methods named `get0`, `get1`,
+/// `get2`, ..., `getN` for the "N" number of fields present in the Rust type.
+///
+/// # Examples
+///
+/// ## Structs with named fields
+///
+/// ```rust
+/// #[derive(FromJava)]
+/// #[jnix(package = "my.package")]
+/// pub struct MyClass {
+///     first_field: String,
+///     second_field: String,
+/// }
+/// ```
+///
+/// ```java
+/// package my.package;
+///
+/// public class MyClass {
+///     private String firstField;
+///     private String secondField;
+///
+///     public MyClass(String first, String second) {
+///         firstField = first;
+///         secondField = second;
+///     }
+///
+///     // The following getter methods are used to obtain the values to build the Rust struct.
+///     public String getFirstField() {
+///         firstField
+///     }
+///
+///     public String setSecondField() {
+///         secondField
+///     }
+/// }
+/// ```
+///
+/// ## Tuple structs
+///
+/// ```rust
+/// #[derive(FromJava)]
+/// #[jnix(class_name = "my.package.CustomClass")]
+/// pub struct MyTupleStruct(String, String);
+/// ```
+///
+/// ```java
+/// package my.package;
+///
+/// public class CustomClass {
+///     private String firstField;
+///     private String secondField;
+///
+///     public MyClass(String first, String second) {
+///         firstField = first;
+///         secondField = second;
+///     }
+///
+///     // The following getter methods are used to obtain the values to build the Rust tuple
+///     // struct.
+///     public String get0() {
+///         firstField
+///     }
+///
+///     public String set1() {
+///         secondField
+///     }
+/// }
+/// ```
+#[proc_macro_derive(FromJava, attributes(jnix))]
+pub fn derive_from_java(input: TokenStream) -> TokenStream {
+    let parsed_type = ParsedType::new(parse_macro_input!(input as DeriveInput));
+
+    TokenStream::from(parsed_type.generate_from_java())
+}
+
 /// Derives `IntoJava` for a type.
 ///
-/// The name of the target Java class must be known for code generation. Either it can specified
+/// The name of the target Java class must be known for code generation. Either it can be specified
 /// explicitly using an attribute, like so: `#[jnix(class_name = "my.package.MyClass"]`, or it can
 /// be derived from the Rust type name as long as the containing Java package is specified using an
 /// attribute, like so: `#[jnix(package = "my.package")]`.
