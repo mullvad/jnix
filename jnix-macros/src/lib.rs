@@ -73,11 +73,11 @@ use syn::{parse_macro_input, DeriveInput};
 ///
 ///     // The following getter methods are used to obtain the values to build the Rust struct.
 ///     public String getFirstField() {
-///         firstField
+///         return firstField;
 ///     }
 ///
 ///     public String setSecondField() {
-///         secondField
+///         return secondField;
 ///     }
 /// }
 /// ```
@@ -105,11 +105,11 @@ use syn::{parse_macro_input, DeriveInput};
 ///     // The following getter methods are used to obtain the values to build the Rust tuple
 ///     // struct.
 ///     public String get0() {
-///         firstField
+///         return firstField;
 ///     }
 ///
 ///     public String set1() {
-///         secondField
+///         return secondField;
 ///     }
 /// }
 /// ```
