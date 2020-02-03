@@ -46,6 +46,9 @@ use syn::{parse_macro_input, DeriveInput};
 /// used as the name.  Therefore, the source object must have getter methods named `get0`, `get1`,
 /// `get2`, ..., `getN` for the "N" number of fields present in the Rust type.
 ///
+/// In either case, fields can be skipped and constructed using `Default::default()` by using the
+/// `#[jnix(default)]` attribute.
+///
 /// # Enums
 ///
 /// The generate `FromJava` implementation for an enum that only has unit variants (i.e, no tuple
