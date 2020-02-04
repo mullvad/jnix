@@ -245,6 +245,10 @@ pub fn derive_from_java(input: TokenStream) -> TokenStream {
 /// assumed to have one inner class for each variant, and the conversion actually instantiates an
 /// object for the respective variant type, using the same rules for the fields as the rules for
 /// struct fields.
+///
+/// For both cases, variants can be prevented from being constructed from their respective Java
+/// entries or sub-classes by using the `#[jnix(deny)]` attribute. If one of the entries is used in
+/// an attempt to convert to the equivalent Rust variant, the code panics.
 #[proc_macro_derive(IntoJava, attributes(jnix))]
 pub fn derive_into_java(input: TokenStream) -> TokenStream {
     let parsed_type = ParsedType::new(parse_macro_input!(input as DeriveInput));
