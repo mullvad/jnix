@@ -21,6 +21,9 @@ Line wrap the file at 100 characters. That is over here: -----------------------
 - **Security**: in case of vulnerabilities.
 
 ## [Unreleased]
+### Added
+- Added `FromJava` trait.
+- Added derive macro for `FromJava`.
 
 ## [0.1.2] - 2020-01-22
 ### Fixed
