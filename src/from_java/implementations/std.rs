@@ -1,5 +1,8 @@
 use crate::{FromJava, JnixEnv};
-use jni::objects::{AutoLocal, JObject, JString, JValue};
+use jni::{
+    objects::{AutoLocal, JObject, JString, JValue},
+    sys::{jboolean, JNI_FALSE},
+};
 
 impl<'env, 'sub_env, T> FromJava<'env, JValue<'sub_env>> for T
 where
@@ -29,6 +32,14 @@ where
 
     fn from_java(env: &JnixEnv<'env>, source: AutoLocal<'sub_env, 'borrow>) -> Self {
         T::from_java(env, source.as_obj())
+    }
+}
+
+impl<'env> FromJava<'env, jboolean> for bool {
+    const JNI_SIGNATURE: &'static str = "Z";
+
+    fn from_java(_: &JnixEnv<'env>, source: jboolean) -> Self {
+        source != JNI_FALSE
     }
 }
 
