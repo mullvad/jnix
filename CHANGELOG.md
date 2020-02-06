@@ -22,6 +22,11 @@ Line wrap the file at 100 characters. That is over here: -----------------------
 
 ## [Unreleased]
 
+## [0.2.0] - 2020-02-05
+### Added
+- Added `FromJava` trait.
+- Added derive macro for `FromJava`.
+
 ## [0.1.2] - 2020-01-22
 ### Fixed
 - Fix another instance of a local reference leak when calling `.into_java(env)` on an `IpAddr`,
