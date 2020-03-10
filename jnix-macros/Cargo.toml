@@ -1,7 +1,7 @@
 [package]
 name = "jnix-macros"
 description = "Companion crate to jnix that provides proc-macros for interfacing JNI with Rust"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Mullvad VPN"]
 readme = "README.md"
 license = "Apache-2.0 OR MIT"
