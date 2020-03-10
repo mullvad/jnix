@@ -21,6 +21,8 @@ Line wrap the file at 100 characters. That is over here: -----------------------
 - **Security**: in case of vulnerabilities.
 
 ## [Unreleased]
+
+## [0.2.1] - 2020-03-10
 ### Added
 - Implement `IntoJava` for `Option<bool>` to convert to a boxed `Boolean` object.
 
