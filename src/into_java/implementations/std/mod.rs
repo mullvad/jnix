@@ -116,6 +116,29 @@ where
     }
 }
 
+impl<'borrow, 'env> IntoJava<'borrow, 'env> for Option<bool>
+where
+    'env: 'borrow,
+{
+    const JNI_SIGNATURE: &'static str = "Ljava/lang/Boolean;";
+
+    type JavaType = AutoLocal<'env, 'borrow>;
+
+    fn into_java(self, env: &'borrow JnixEnv<'env>) -> Self::JavaType {
+        match self {
+            Some(value) => {
+                let class = env.get_class("java/lang/Boolean");
+                let boxed_boolean = env
+                    .new_object(&class, "(Z)V", &[JValue::Bool(value as jboolean)])
+                    .expect("Failed to create boxed Boolean object");
+
+                env.auto_local(boxed_boolean)
+            }
+            None => env.auto_local(JObject::null()),
+        }
+    }
+}
+
 impl<'borrow, 'env, T> IntoJava<'borrow, 'env> for Vec<T>
 where
     'env: 'borrow,
