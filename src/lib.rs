@@ -18,7 +18,6 @@
 //!     jni::{objects::JObject, JNIEnv},
 //!     JnixEnv, IntoJava,
 //! };
-//! # use jnix_macros::IntoJava;
 //!
 //! // Rust type definition
 //! #[derive(Default, IntoJava)]
