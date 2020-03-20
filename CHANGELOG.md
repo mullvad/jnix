@@ -21,6 +21,8 @@ Line wrap the file at 100 characters. That is over here: -----------------------
 - **Security**: in case of vulnerabilities.
 
 ## [Unreleased]
+### Added
+- Implement `FromJava<JObject>` for `i32` to convert from a boxed `Integer` object.
 
 ## [0.2.1] - 2020-03-10
 ### Added
