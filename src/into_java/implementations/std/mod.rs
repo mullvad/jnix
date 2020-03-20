@@ -139,6 +139,29 @@ where
     }
 }
 
+impl<'borrow, 'env> IntoJava<'borrow, 'env> for Option<i32>
+where
+    'env: 'borrow,
+{
+    const JNI_SIGNATURE: &'static str = "Ljava/lang/Integer;";
+
+    type JavaType = AutoLocal<'env, 'borrow>;
+
+    fn into_java(self, env: &'borrow JnixEnv<'env>) -> Self::JavaType {
+        match self {
+            Some(value) => {
+                let class = env.get_class("java/lang/Integer");
+                let boxed_boolean = env
+                    .new_object(&class, "(I)V", &[JValue::Int(value as jint)])
+                    .expect("Failed to create boxed Integer object");
+
+                env.auto_local(boxed_boolean)
+            }
+            None => env.auto_local(JObject::null()),
+        }
+    }
+}
+
 impl<'borrow, 'env, T> IntoJava<'borrow, 'env> for Vec<T>
 where
     'env: 'borrow,
