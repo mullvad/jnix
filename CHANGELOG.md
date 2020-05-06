@@ -21,6 +21,8 @@ Line wrap the file at 100 characters. That is over here: -----------------------
 - **Security**: in case of vulnerabilities.
 
 ## [Unreleased]
+### Added
+- Implement `IntoJava` for `i64`.
 
 ## [0.2.2] - 2020-03-23
 ### Added
