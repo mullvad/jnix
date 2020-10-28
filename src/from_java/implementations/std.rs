@@ -120,3 +120,50 @@ where
         }
     }
 }
+
+impl<'env, 'sub_env, T> FromJava<'env, JObject<'sub_env>> for Vec<T>
+where
+    'env: 'sub_env,
+    T: FromJava<'env, JObject<'sub_env>>,
+{
+    const JNI_SIGNATURE: &'static str = "Ljava/util/ArrayList;";
+
+    fn from_java(env: &JnixEnv<'env>, source: JObject<'sub_env>) -> Self {
+        let class = env.get_class("java/util/ArrayList");
+        let size_method_id = env
+            .get_method_id(&class, "size", "()I")
+            .expect("Failed to get method ID for ArrayList.size()");
+        let size_return_type = JavaType::Primitive(Primitive::Int);
+
+        let item_count = env
+            .call_method_unchecked(source, size_method_id, size_return_type, &[])
+            .expect("Failed to call ArrayList.size()")
+            .i()
+            .expect("Call to ArrayList.size() did not return an int primitive");
+
+        let mut target = Vec::with_capacity(item_count as usize);
+
+        let get_method_id = env
+            .get_method_id(&class, "get", "(I)Ljava/lang/Object;")
+            .expect("Failed to get method ID for ArrayList.get()");
+        let get_return_type = JavaType::Object("java/lang/Object".to_owned());
+
+        for index in 0..item_count {
+            let object = env
+                .call_method_unchecked(
+                    source,
+                    get_method_id,
+                    get_return_type.clone(),
+                    &[JValue::Int(index)],
+                )
+                .expect("Failed to call ArrayList.get()")
+                .l()
+                .expect("Call to ArrayList.get() did not return an object");
+            let item = T::from_java(env, object);
+
+            target.push(item);
+        }
+
+        target
+    }
+}
