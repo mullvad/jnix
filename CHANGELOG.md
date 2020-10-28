@@ -21,6 +21,8 @@ Line wrap the file at 100 characters. That is over here: -----------------------
 - **Security**: in case of vulnerabilities.
 
 ## [Unreleased]
+### Added
+- Implement `FromJava` for `Vec<T>`.
 
 ## [0.2.3] - 2020-05-07
 ### Added
