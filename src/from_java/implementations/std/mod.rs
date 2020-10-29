@@ -46,6 +46,20 @@ impl<'env> FromJava<'env, jboolean> for bool {
     }
 }
 
+impl<'env, 'sub_env> FromJava<'env, JValue<'sub_env>> for bool
+where
+    'env: 'sub_env,
+{
+    const JNI_SIGNATURE: &'static str = "Z";
+
+    fn from_java(env: &JnixEnv<'env>, source: JValue<'sub_env>) -> Self {
+        match source {
+            JValue::Bool(boolean) => bool::from_java(env, boolean),
+            _ => panic!("Can't convert Java type, expected a boolean primitive"),
+        }
+    }
+}
+
 impl<'env, 'sub_env> FromJava<'env, JObject<'sub_env>> for i32
 where
     'env: 'sub_env,
