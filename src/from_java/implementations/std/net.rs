@@ -3,7 +3,7 @@ use jni::{
     objects::JObject,
     signature::{JavaType, Primitive},
 };
-use std::net::IpAddr;
+use std::net::{IpAddr, Ipv4Addr};
 
 fn read_inet_address_octets<'env, 'o>(env: &JnixEnv<'env>, source: JObject<'o>) -> JObject<'env>
 where
@@ -39,6 +39,19 @@ where
     }
 
     A::from(buffer)
+}
+
+impl<'env, 'sub_env> FromJava<'env, JObject<'sub_env>> for Ipv4Addr
+where
+    'env: 'sub_env,
+{
+    const JNI_SIGNATURE: &'static str = "Ljava/net/Inet4Address;";
+
+    fn from_java(env: &JnixEnv<'env>, source: JObject<'sub_env>) -> Self {
+        let octets = read_inet_address_octets(env, source);
+
+        address_from_octets(env, octets, [0u8; 4])
+    }
 }
 
 impl<'env, 'sub_env> FromJava<'env, JObject<'sub_env>> for IpAddr
