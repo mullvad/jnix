@@ -1,3 +1,5 @@
+mod net;
+
 use crate::{FromJava, JnixEnv};
 use jni::{
     objects::{AutoLocal, JObject, JString, JValue},

@@ -23,6 +23,7 @@ Line wrap the file at 100 characters. That is over here: -----------------------
 ## [Unreleased]
 ### Added
 - Implement `FromJava` for `Vec<T>`.
+- Implement `FromJava` for `IpAddr`, `Ipv4Addr` and `Ipv6Addr`.
 
 ## [0.2.3] - 2020-05-07
 ### Added
