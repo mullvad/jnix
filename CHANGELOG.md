@@ -24,6 +24,7 @@ Line wrap the file at 100 characters. That is over here: -----------------------
 ### Added
 - Implement `FromJava` for `Vec<T>`.
 - Implement `FromJava` for `IpAddr`, `Ipv4Addr` and `Ipv6Addr`.
+- Implement `FromJava<JValue>` for `bool` so that it can be used in structs that derive `FromJava`.
 
 ## [0.2.3] - 2020-05-07
 ### Added
