@@ -21,6 +21,8 @@ Line wrap the file at 100 characters. That is over here: -----------------------
 - **Security**: in case of vulnerabilities.
 
 ## [Unreleased]
+
+## [0.2.4] - 2020-11-17
 ### Added
 - Implement `FromJava` for `Vec<T>`.
 - Implement `FromJava` for `IpAddr`, `Ipv4Addr` and `Ipv6Addr`.
