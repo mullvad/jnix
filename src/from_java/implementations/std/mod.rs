@@ -68,23 +68,17 @@ impl<'env> FromJava<'env, jint> for i32 {
     }
 }
 
-impl<'env, 'sub_env> FromJava<'env, JObject<'sub_env>> for i32
+impl<'env, 'sub_env> FromJava<'env, JValue<'sub_env>> for i32
 where
     'env: 'sub_env,
 {
-    const JNI_SIGNATURE: &'static str = "Ljava/lang/Integer;";
+    const JNI_SIGNATURE: &'static str = "I";
 
-    fn from_java(env: &JnixEnv<'env>, source: JObject<'sub_env>) -> Self {
-        let class = env.get_class("java/lang/Integer");
-        let method_id = env
-            .get_method_id(&class, "intValue", "()I")
-            .expect("Failed to get method ID for Integer.intValue()");
-        let return_type = JavaType::Primitive(Primitive::Int);
-
-        env.call_method_unchecked(source, method_id, return_type, &[])
-            .expect("Failed to call Integer.intValue()")
-            .i()
-            .expect("Call to Integer.intValue() did not return an int primitive")
+    fn from_java(env: &JnixEnv<'env>, source: JValue<'sub_env>) -> Self {
+        match source {
+            JValue::Int(integer) => i32::from_java(env, integer),
+            _ => panic!("Can't convert Java type, expected an integer primitive"),
+        }
     }
 }
 
