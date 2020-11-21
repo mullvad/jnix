@@ -21,13 +21,18 @@ Line wrap the file at 100 characters. That is over here: -----------------------
 - **Security**: in case of vulnerabilities.
 
 ## [Unreleased]
+### Added
+- Implement `FromJava` for `Option<i32>`.
+
 ### Changed
 - Implementation of `FromJava<JValue>` for `i32` now expects an `int` Java primitive instead of a
   boxed `Integer` object, this means that when deriving `FromJava` for custom types, `i32` fields
-  must now have a respective `int` field in the respective Java class.
+  must now have a respective `int` field in the respective Java class. If `Integer` object fields
+  are desired, the Rust field type should be `Option<i32>`.
 
 ### Removed
-- Implementation of `FromJava<JObject>` for `i32`.
+- Implementation of `FromJava<JObject>` for `i32`. If conversion from `Integer` objects is needed,
+  it's possible to use `Option<i32>` as the target Rust type.
 
 ## [0.2.4] - 2020-11-17
 ### Added
