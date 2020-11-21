@@ -139,6 +139,30 @@ where
     }
 }
 
+impl<'env, 'sub_env> FromJava<'env, JObject<'sub_env>> for Option<i32> {
+    const JNI_SIGNATURE: &'static str = "Ljava/lang/Integer;";
+
+    fn from_java(env: &JnixEnv<'env>, source: JObject<'sub_env>) -> Self {
+        if source.is_null() {
+            None
+        } else {
+            let class = env.get_class("java/lang/Integer");
+            let method_id = env
+                .get_method_id(&class, "intValue", "()I")
+                .expect("Failed to get method ID for Integer.intValue()");
+            let return_type = JavaType::Primitive(Primitive::Int);
+
+            let int_value = env
+                .call_method_unchecked(source, method_id, return_type, &[])
+                .expect("Failed to call Integer.intValue()")
+                .i()
+                .expect("Call to Integer.intValue() did not return an int primitive");
+
+            Some(int_value)
+        }
+    }
+}
+
 impl<'env, 'sub_env, T> FromJava<'env, JObject<'sub_env>> for Vec<T>
 where
     'env: 'sub_env,
