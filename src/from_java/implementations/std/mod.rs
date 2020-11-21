@@ -4,7 +4,7 @@ use crate::{FromJava, JnixEnv};
 use jni::{
     objects::{AutoLocal, JObject, JString, JValue},
     signature::{JavaType, Primitive},
-    sys::{jboolean, JNI_FALSE},
+    sys::{jboolean, jint, JNI_FALSE},
 };
 
 impl<'env, 'sub_env, T> FromJava<'env, JValue<'sub_env>> for T
@@ -57,6 +57,14 @@ where
             JValue::Bool(boolean) => bool::from_java(env, boolean),
             _ => panic!("Can't convert Java type, expected a boolean primitive"),
         }
+    }
+}
+
+impl<'env> FromJava<'env, jint> for i32 {
+    const JNI_SIGNATURE: &'static str = "I";
+
+    fn from_java(_: &JnixEnv<'env>, source: jint) -> Self {
+        source as i32
     }
 }
 
