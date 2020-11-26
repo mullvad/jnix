@@ -21,6 +21,8 @@ Line wrap the file at 100 characters. That is over here: -----------------------
 - **Security**: in case of vulnerabilities.
 
 ## [Unreleased]
+
+## [0.3.0] - 2020-11-27
 ### Added
 - Implement `FromJava` for `Option<i32>`.
 
