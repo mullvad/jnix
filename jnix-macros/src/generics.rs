@@ -132,6 +132,14 @@ pub struct TypeParameters {
 }
 
 impl TypeParameters {
+    pub fn erased_type_for(&self, type_to_erase: &Type) -> Option<String> {
+        if self.is_used_in_type(type_to_erase) {
+            Some("Ljava/lang/Object;".to_owned())
+        } else {
+            None
+        }
+    }
+
     pub fn is_used_in_type(&self, type_to_check: &Type) -> bool {
         match type_to_check {
             Type::Never(_) => false,
