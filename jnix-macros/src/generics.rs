@@ -1,7 +1,7 @@
 use crate::JnixAttributes;
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use syn::{Generics, Ident, Lifetime, Path, ReturnType, Token, Type, TypeParam, TypeParamBound};
 
 pub struct ParsedGenerics {
@@ -92,7 +92,7 @@ impl ParsedGenerics {
 
     pub fn type_parameters(&self) -> TypeParameters {
         TypeParameters {
-            params: self.type_bounds.keys().cloned().collect(),
+            bounds: self.type_bounds.clone(),
         }
     }
 
@@ -157,7 +157,7 @@ impl ParsedGenerics {
 }
 
 pub struct TypeParameters {
-    params: HashSet<String>,
+    bounds: HashMap<String, String>,
 }
 
 impl TypeParameters {
@@ -213,7 +213,7 @@ impl TypeParameters {
 
     fn contains_path(&self, path: &Path) -> bool {
         path.get_ident()
-            .map(|ident| self.params.contains(&ident.to_string()))
+            .map(|ident| self.bounds.contains_key(&ident.to_string()))
             .unwrap_or(false)
     }
 
