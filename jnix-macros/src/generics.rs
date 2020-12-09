@@ -140,7 +140,7 @@ impl TypeParameters {
         }
     }
 
-    pub fn is_used_in_type(&self, type_to_check: &Type) -> bool {
+    fn is_used_in_type(&self, type_to_check: &Type) -> bool {
         match type_to_check {
             Type::Never(_) => false,
 
