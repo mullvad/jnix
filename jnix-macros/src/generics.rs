@@ -162,10 +162,19 @@ pub struct TypeParameters {
 
 impl TypeParameters {
     pub fn erased_type_for(&self, type_to_erase: &Type) -> Option<String> {
-        if self.is_used_in_type(type_to_erase) {
-            Some("Ljava/lang/Object;".to_owned())
-        } else {
-            None
+        match type_to_erase {
+            Type::Path(path) => {
+                let type_name = path.path.get_ident()?.to_string();
+
+                self.bounds.get(&type_name).cloned()
+            }
+            complex_path => {
+                if self.is_used_in_type(complex_path) {
+                    Some("Ljava/lang/Object;".to_owned())
+                } else {
+                    None
+                }
+            }
         }
     }
 
