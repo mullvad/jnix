@@ -21,6 +21,9 @@ Line wrap the file at 100 characters. That is over here: -----------------------
 - **Security**: in case of vulnerabilities.
 
 ## [Unreleased]
+### Added
+- Allow using a `#[jnix(bounds = "T: my.package.MyClass")]` attribute to specify the underlying
+  erased type used for a generic type parameter.
 
 ## [0.3.0] - 2020-11-27
 ### Added
