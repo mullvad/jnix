@@ -1,23 +1,28 @@
+use crate::JnixAttributes;
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use syn::{Generics, Ident, Lifetime, Path, ReturnType, Token, Type, TypeParam, TypeParamBound};
 
 pub struct ParsedGenerics {
-    type_parameters: Vec<Ident>,
+    type_bounds: HashMap<String, String>,
     parameters: Vec<TokenStream>,
     lifetime_constraints: Vec<TokenStream>,
     type_constraints: Vec<TypeParam>,
 }
 
 impl ParsedGenerics {
-    pub fn new(generics: &Generics) -> Self {
+    pub fn new(generics: &Generics, attributes: &JnixAttributes) -> Self {
         let (lifetimes, types) = Self::collect_generic_definitions(generics);
         let parameters = Self::collect_generic_params(&lifetimes, &types);
         let (lifetime_constraints, type_constraints) = Self::collect_constraints(generics);
+        let bounds_attribute = attributes
+            .get_value("bounds")
+            .map(|literal| literal.value());
+        let type_bounds = Self::collect_type_bounds(types, bounds_attribute);
 
         ParsedGenerics {
-            type_parameters: types,
+            type_bounds,
             parameters,
             lifetime_constraints,
             type_constraints,
@@ -57,13 +62,37 @@ impl ParsedGenerics {
         (lifetime_constraints, type_constraints)
     }
 
+    fn collect_type_bounds(types: Vec<Ident>, bounds: Option<String>) -> HashMap<String, String> {
+        let mut type_bounds = if let Some(bounds_string) = bounds {
+            bounds_string
+                .split(",")
+                .filter_map(Self::parse_bounds_for_one_type)
+                .collect()
+        } else {
+            HashMap::with_capacity(types.len())
+        };
+
+        for maybe_unbounded_type in types.into_iter().map(|identifier| identifier.to_string()) {
+            if !type_bounds.contains_key(&maybe_unbounded_type) {
+                type_bounds.insert(maybe_unbounded_type, "Ljava/lang/Object;".to_owned());
+            }
+        }
+
+        type_bounds
+    }
+
+    fn parse_bounds_for_one_type(bounds_string: &str) -> Option<(String, String)> {
+        let mut parts = bounds_string.splitn(2, ":");
+        let bounded_type = parts.next()?.trim().to_owned();
+        let bound_class = parts.next()?.trim();
+        let bound_signature = format!("L{};", bound_class.replace('.', "/"));
+
+        Some((bounded_type, bound_signature))
+    }
+
     pub fn type_parameters(&self) -> TypeParameters {
         TypeParameters {
-            params: self
-                .type_parameters
-                .iter()
-                .map(|param| param.to_string())
-                .collect(),
+            params: self.type_bounds.keys().cloned().collect(),
         }
     }
 
