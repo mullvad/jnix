@@ -280,13 +280,15 @@ impl ParsedFields {
                 let getter_name = format!("get_{}", field.name).to_mixed_case();
                 let getter_literal = LitStr::new(&getter_name, Span::call_site());
 
-                let jni_signature = if type_parameters.is_used_in_type(&field_type) {
-                    quote! { "Ljava/lang/Object;" }
+                let jni_signature;
+
+                if let Some(signature) = type_parameters.erased_type_for(&field_type) {
+                    jni_signature = quote! { #signature }
                 } else {
-                    quote! {
+                    jni_signature = quote! {
                         <#field_type as jnix::FromJava<jnix::jni::objects::JValue>>::JNI_SIGNATURE
                     }
-                };
+                }
 
                 quote! {
                     let jni_signature = #jni_signature;
@@ -369,8 +371,8 @@ impl ParsedFields {
                     let signature = format!("L{};", target.value().replace(".", "/"));
 
                     quote! { #signature }
-                } else if type_parameters.is_used_in_type(&field.get_type()) {
-                    quote! { "Ljava/lang/Object;" }
+                } else if let Some(signature) = type_parameters.erased_type_for(&field.get_type()) {
+                    quote! { #signature }
                 } else {
                     quote! { #converted_binding.jni_signature() }
                 };

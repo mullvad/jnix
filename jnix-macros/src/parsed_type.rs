@@ -13,12 +13,13 @@ pub struct ParsedType {
 impl ParsedType {
     pub fn new(input: DeriveInput) -> Self {
         let attributes = JnixAttributes::new(&input.attrs);
+        let generics = ParsedGenerics::new(&input.generics, &attributes);
         let data = TypeData::from(input.data, &attributes);
 
         ParsedType {
             attributes,
             type_name: input.ident,
-            generics: ParsedGenerics::new(&input.generics),
+            generics,
             data,
         }
     }
