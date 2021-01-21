@@ -15,10 +15,17 @@ pub struct ParsedField {
     pub source_binding: Ident,
     pub span: Span,
     pub skip: bool,
+    pub unnamed_field_index: Option<u32>,
 }
 
 impl ParsedField {
-    pub fn new(name: String, field: Field, member: Member, span: Span) -> Self {
+    pub fn new(
+        name: String,
+        field: Field,
+        member: Member,
+        span: Span,
+        unnamed_field_index: Option<u32>,
+    ) -> Self {
         let attributes = JnixAttributes::new(&field.attrs);
         let source_binding = Ident::new(&format!("_source_{}", name), span);
         let skip = attributes.has_flag("skip");
@@ -31,6 +38,7 @@ impl ParsedField {
             source_binding,
             span,
             skip,
+            unnamed_field_index,
         }
     }
 
@@ -40,7 +48,7 @@ impl ParsedField {
         let name = ident.to_string();
         let member = Member::Named(ident);
 
-        ParsedField::new(name, field, member, span)
+        ParsedField::new(name, field, member, span, None)
     }
 
     pub fn from_unnamed_field((field, index): (Field, u32)) -> Self {
@@ -48,11 +56,20 @@ impl ParsedField {
         let name = format!("_{}", index);
         let member = Member::Unnamed(Index { index, span });
 
-        ParsedField::new(name, field, member, span)
+        ParsedField::new(name, field, member, span, Some(index))
     }
 
     pub fn get_type(&self) -> &Type {
         &self.field.ty
+    }
+
+    pub fn getter(&self) -> LitStr {
+        let getter_name = match self.unnamed_field_index {
+            Some(index) => format!("component{}", index + 1),
+            None => format!("get_{}", self.name).to_mixed_case(),
+        };
+
+        LitStr::new(&getter_name, self.span)
     }
 
     pub fn binding(&self, prefix: &str) -> Ident {
@@ -277,9 +294,7 @@ impl ParsedFields {
             if field.attributes.has_flag("default") {
                 quote! { <#field_type as std::default::Default>::default() }
             } else {
-                let getter_name = format!("get_{}", field.name).to_mixed_case();
-                let getter_literal = LitStr::new(&getter_name, Span::call_site());
-
+                let getter = field.getter();
                 let jni_signature;
 
                 if let Some(signature) = type_parameters.erased_type_for(&field_type) {
@@ -293,16 +308,16 @@ impl ParsedFields {
                 quote! {
                     let jni_signature = #jni_signature;
                     let method_signature = format!("(){}", jni_signature);
-                    let method_id = env.get_method_id(&class, #getter_literal, &method_signature)
+                    let method_id = env.get_method_id(&class, #getter, &method_signature)
                         .expect(concat!(
-                            "Failed to get method ID for ", #class_name, "::", #getter_literal
+                            "Failed to get method ID for ", #class_name, "::", #getter
                         ));
                     let return_type = jni_signature.parse().unwrap_or_else(|_| {
                         panic!("Invalid JNI signature: {}", jni_signature);
                     });
 
                     let java_value = env.call_method_unchecked(source, method_id, return_type, &[])
-                        .expect(concat!("Failed to call ", #class_name, "::", #getter_literal));
+                        .expect(concat!("Failed to call ", #class_name, "::", #getter));
 
                     <#field_type as jnix::FromJava<_>>::from_java(env, java_value)
                 }
