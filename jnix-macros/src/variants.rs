@@ -288,7 +288,7 @@ impl ParsedVariants {
                 let variant_jni_class_name_literal =
                     LitStr::new(&variant_jni_class_name, Span::call_site());
 
-                if variant.fields.is_unit() {
+                if variant.fields.is_unit() && type_parameters.is_empty() {
                     self.generate_unit_variant_into_java_conversion(
                         &variant_jni_class_name,
                         variant_jni_class_name_literal,
