@@ -161,6 +161,10 @@ pub struct TypeParameters {
 }
 
 impl TypeParameters {
+    pub fn is_empty(&self) -> bool {
+        self.bounds.is_empty()
+    }
+
     pub fn erased_type_for(&self, type_to_erase: &Type) -> Option<String> {
         match type_to_erase {
             Type::Path(path) => {
