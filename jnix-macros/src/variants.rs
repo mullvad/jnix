@@ -288,16 +288,84 @@ impl ParsedVariants {
                 let variant_jni_class_name_literal =
                     LitStr::new(&variant_jni_class_name, Span::call_site());
 
-                let variant_type_name = format!("{}::{}", type_name, variant.name);
-                let variant_type_name_literal = LitStr::new(&variant_type_name, Span::call_site());
-
-                variant.fields.generate_enum_variant_into_java(
-                    &variant_jni_class_name_literal,
-                    &variant_type_name_literal,
-                    &variant_class_name,
-                    type_parameters,
-                )
+                if variant.fields.is_unit() {
+                    self.generate_unit_variant_into_java_conversion(
+                        &variant_jni_class_name,
+                        variant_jni_class_name_literal,
+                        &variant_class_name,
+                    )
+                } else {
+                    self.generate_variant_with_fields_into_java_conversion(
+                        variant_jni_class_name_literal,
+                        &type_name,
+                        &variant_class_name,
+                        type_parameters,
+                        variant,
+                    )
+                }
             })
             .collect()
+    }
+
+    fn generate_unit_variant_into_java_conversion(
+        &self,
+        variant_jni_class_name: &str,
+        variant_jni_class_name_literal: LitStr,
+        variant_class_name: &str,
+    ) -> TokenStream {
+        let variant_class_name_literal = LitStr::new(&variant_class_name, Span::call_site());
+
+        let field_signature = format!("L{};", variant_jni_class_name);
+        let field_signature_literal = LitStr::new(&field_signature, Span::call_site());
+
+        quote! {
+            let class = env.get_class(#variant_jni_class_name_literal);
+
+            let field_id = env
+                .get_static_field_id(&class, "INSTANCE", #field_signature_literal)
+                .expect(concat!(
+                    "Failed to get field ID for ",
+                    #variant_class_name_literal,
+                    ".INSTANCE"
+                ));
+
+            let field_type =
+                jnix::jni::signature::JavaType::Object(#variant_jni_class_name_literal.to_owned());
+
+            let instance = env
+                .get_static_field_unchecked(&class, field_id, field_type)
+                .expect(concat!(
+                    "Failed to retrieve ",
+                    #variant_class_name_literal,
+                    ".INSTANCE static field"
+                ))
+                .l()
+                .expect(concat!(
+                    "The ",
+                    #variant_class_name_literal,
+                    ".INSTANCE field is not an object"
+                ));
+
+            env.auto_local(instance)
+        }
+    }
+
+    fn generate_variant_with_fields_into_java_conversion(
+        &self,
+        variant_jni_class_name_literal: LitStr,
+        type_name: &str,
+        variant_class_name: &str,
+        type_parameters: &TypeParameters,
+        variant: &ParsedVariant,
+    ) -> TokenStream {
+        let variant_type_name = format!("{}::{}", type_name, variant.name);
+        let variant_type_name_literal = LitStr::new(&variant_type_name, Span::call_site());
+
+        variant.fields.generate_enum_variant_into_java(
+            &variant_jni_class_name_literal,
+            &variant_type_name_literal,
+            &variant_class_name,
+            type_parameters,
+        )
     }
 }
