@@ -30,6 +30,11 @@ Line wrap the file at 100 characters. That is over here: -----------------------
   that each field with index N has a `component{N+1}` getter method instead of the previously
   assumed `get{N}` method. This makes it easier to interface with Kotlin data classes, because it
   automatically generates these `component{N+1}` getter methods for a `data class`.
+- Derivation of `IntoJava` for the unit variants of non-generic enums (i.e., the variants that have
+  no fields) now assume that the Java representation is a singleton class that has its instance
+  stored in a `INSTANCE` field. This allows Kotlin `object` variants to be used as the sub-classes
+  to represent the variants in a `sealed class`. Note that this does not change the assumption that
+  an enum that only has unit variants is represented as an `enum class`.
 
 ## [0.3.0] - 2020-11-27
 ### Added
