@@ -5,22 +5,23 @@
 //!
 //! - [`AsJValue`]: for allowing a JNI type to be convected to a `JValue` wrapper type.
 //! - [`IntoJava`]: for allowing a Rust type to be converted to a Java type.
+//! - [`FromJava`]: for allowing a Rust type to be created from a Java type.
 //!
 //! A [`JnixEnv`] helper type is also provided, which is a [`JNIEnv`] wrapper that contains an
 //! internal class cache for preloaded classes.
 //!
-//! If compiled with the `derive` feature flag, the crate also exports a [derive procedural macro
-//! for `IntoJava`][derive-into-java], which allows writing conversion code a lot easier.
-//! An example would be:
+//! If compiled with the `derive` feature flag, the crate also exports procedural macros to
+//! [derive `IntoJava`] and to [derive `FromJava`], which makes writing conversion code a lot
+//! easier.  An example would be:
 //!
 //! ```rust
 //! use jnix::{
 //!     jni::{objects::JObject, JNIEnv},
-//!     JnixEnv, IntoJava,
+//!     JnixEnv, FromJava, IntoJava,
 //! };
 //!
 //! // Rust type definition
-//! #[derive(Default, IntoJava)]
+//! #[derive(Default, FromJava, IntoJava)]
 //! #[jnix(package = "my.package")]
 //! pub struct MyData {
 //!     number: i32,
@@ -34,15 +35,17 @@
 //! pub extern "system" fn Java_my_package_JniClass_getData<'env>(
 //!     env: JNIEnv<'env>,
 //!     _this: JObject<'env>,
+//!     data: JObject<'env>,
 //! ) -> JObject<'env> {
 //!     // Create the `JnixEnv` wrapper
 //!     let env = JnixEnv::from(env);
 //!
-//!     // Prepare the result type
-//!     let data = MyData::default();
+//!     // Convert parameter to Rust type
+//!     let data = MyData::from_java(&env, data);
 //!
-//!     // Since a smart pointer is returned from `into_java`, the inner object must be "leaked" so
-//!     // that the garbage collector can own it afterwards
+//!     // Create a new `MyData` object by converting from the Rust type. Since a smart pointer is
+//!     // returned from `into_java`, the inner object must be "leaked" sothat the garbage collector
+//!     // can own it afterwards
 //!     data.into_java(&env).forget()
 //! }
 //! ```
@@ -58,6 +61,15 @@
 //!         // is for the target Java class to have a constructor with the expected type signature
 //!         // following the field order of the Rust type.
 //!     }
+//!
+//!     // These getters are called by the generated `FromJava` code
+//!     public int getNumber() {
+//!         return 10;
+//!     }
+//!
+//!     public String getString() {
+//!         return "string value";
+//!     }
 //! }
 //! ```
 //!
@@ -66,8 +78,10 @@
 //! [`JNIEnv`]: jni::JNIEnv
 //! [`AsJValue`]: as_jvalue::AsJValue
 //! [`IntoJava`]: into_java::IntoJava
+//! [`FromJava`]: from_java::FromJava
 //! [`JnixEnv`]: jnix_env::JnixEnv
-//! [derive-into-java]: ../jnix_macros/derive.IntoJava.html
+//! [derive `IntoJava`]: ../jnix_macros/derive.IntoJava.html
+//! [derive `FromJava`]: ../jnix_macros/derive.FromJava.html
 
 #![deny(missing_docs)]
 
