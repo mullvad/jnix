@@ -67,7 +67,7 @@
 //! [`AsJValue`]: as_jvalue::AsJValue
 //! [`IntoJava`]: into_java::IntoJava
 //! [`JnixEnv`]: jnix_env::JnixEnv
-//! [derive-into-java]: https://docs.rs/jnix-macros/0.1.0/jnix_macros/derive.IntoJava.html
+//! [derive-into-java]: ../jnix_macros/derive.IntoJava.html
 
 #![deny(missing_docs)]
 
