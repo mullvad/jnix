@@ -63,10 +63,10 @@
 //!
 //! [JNI]: https://en.wikipedia.org./wiki/Java_Native_Interface
 //! [`jni-rs`]: https://crates.io/crates/jni
-//! [`JNIEnv`]: https://docs.rs/jni/0.14.0/jni/struct.JNIEnv.html
-//! [`AsJValue`]: https://docs.rs/jnix/0.1.0/jnix/as_jvalue/trait.AsJValue.html
-//! [`IntoJava`]: https://docs.rs/jnix/0.1.0/jnix/into_java/trait.IntoJava.html
-//! [`JnixEnv`]: https://docs.rs/jnix/0.1.0/jnix/jnix_env/struct.JnixEnv.html
+//! [`JNIEnv`]: jni::JNIEnv
+//! [`AsJValue`]: as_jvalue::AsJValue
+//! [`IntoJava`]: into_java::IntoJava
+//! [`JnixEnv`]: jnix_env::JnixEnv
 //! [derive-into-java]: https://docs.rs/jnix-macros/0.1.0/jnix_macros/derive.IntoJava.html
 
 #![deny(missing_docs)]
