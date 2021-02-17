@@ -42,9 +42,11 @@ use syn::{parse_macro_input, DeriveInput};
 /// converted to mixed case (also known sometimes as camel case). Therefore, the source object must
 /// have the necessary getter methods for the Rust type to be constructed correctly.
 ///
-/// For tuple structs, since the fields don't have names, the field index starting from zero isr
-/// used as the name.  Therefore, the source object must have getter methods named `get0`, `get1`,
-/// `get2`, ..., `getN` for the "N" number of fields present in the Rust type.
+/// For tuple structs, since the fields don't have names, the field index starting from one is
+/// used as the name.  Therefore, the source object must have getter methods named `component1`,
+/// `component2`, ..., `componentN` for the "N" number of fields present in the Rust type. This
+/// follows the convention used by Kotlin for a `data class`, so they are automatically generated
+/// by the Kotlin complier for `data class`es.
 ///
 /// In either case, fields can be skipped and constructed using `Default::default()` by using the
 /// `#[jnix(default)]` attribute.
@@ -122,11 +124,11 @@ use syn::{parse_macro_input, DeriveInput};
 ///
 ///     // The following getter methods are used to obtain the values to build the Rust tuple
 ///     // struct.
-///     public String get0() {
+///     public String component1() {
 ///         return firstField;
 ///     }
 ///
-///     public String set1() {
+///     public String component2() {
 ///         return secondField;
 ///     }
 /// }
@@ -189,11 +191,11 @@ use syn::{parse_macro_input, DeriveInput};
 ///             this.b = b;
 ///         }
 ///
-///         public String get0() {
+///         public String component1() {
 ///             return a;
 ///         }
 ///
-///         public String get1() {
+///         public String component2() {
 ///             return b;
 ///         }
 ///     }
