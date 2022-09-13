@@ -7,7 +7,7 @@ use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
 fn read_inet_address_octets<'env, 'o>(env: &JnixEnv<'env>, source: JObject<'o>) -> JObject<'env>
 where
-    'env: 'o,
+    'o: 'env,
 {
     let class = env.get_class("java/net/InetAddress");
     let method_id = env

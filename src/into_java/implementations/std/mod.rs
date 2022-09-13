@@ -210,6 +210,6 @@ impl<'borrow, 'env: 'borrow> IntoJava<'borrow, 'env> for String {
     fn into_java(self, env: &'borrow JnixEnv<'env>) -> Self::JavaType {
         let jstring = env.new_string(&self).expect("Failed to create Java String");
 
-        env.auto_local(jstring.into())
+        env.auto_local(jstring)
     }
 }
