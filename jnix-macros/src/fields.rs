@@ -1,5 +1,5 @@
 use crate::{JnixAttributes, TypeParameters};
-use heck::MixedCase;
+use heck::ToLowerCamelCase;
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
 use syn::{
@@ -66,7 +66,7 @@ impl ParsedField {
     pub fn getter(&self) -> LitStr {
         let getter_name = match self.unnamed_field_index {
             Some(index) => format!("component{}", index + 1),
-            None => format!("get_{}", self.name).to_mixed_case(),
+            None => format!("get_{}", self.name).to_lower_camel_case(),
         };
 
         LitStr::new(&getter_name, self.span)

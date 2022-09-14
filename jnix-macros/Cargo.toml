@@ -17,7 +17,7 @@ path = "src/lib.rs"
 proc-macro = true
 
 [dependencies]
-heck = "0.3"
+heck = "0.4"
 proc-macro2 = "1"
 quote = "1"
 syn = { version = "1", features = ['full'] }
