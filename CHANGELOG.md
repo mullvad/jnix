@@ -22,6 +22,13 @@ Line wrap the file at 100 characters. That is over here: -----------------------
 
 ## [Unreleased]
 
+## [0.5.0] - 2022-09-14
+### Fixed
+- Fix broken derivation of `FromJava` for enums with only unit variants.
+
+### Changed
+- Upgrade `jni` to `0.19`.
+
 ## [0.4.0] - 2021-02-17
 ### Added
 - Allow using a `#[jnix(bounds = "T: my.package.MyClass")]` attribute to specify the underlying
