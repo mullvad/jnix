@@ -3,7 +3,8 @@ use jni::{
     objects::JObject,
     signature::{JavaType, Primitive},
 };
-use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
+use std::convert::TryFrom;
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
 
 fn read_inet_address_octets<'env, 'o>(env: &JnixEnv<'env>, source: JObject<'o>) -> JObject<'env>
 where
@@ -87,5 +88,43 @@ where
                 count
             ),
         }
+    }
+}
+
+impl<'env, 'sub_env> FromJava<'env, JObject<'sub_env>> for SocketAddr
+where
+    'env: 'sub_env,
+{
+    const JNI_SIGNATURE: &'static str = "Ljava/net/InetSocketAddress;";
+
+    fn from_java(env: &JnixEnv<'env>, source: JObject<'sub_env>) -> Self {
+        let class = env.get_class("java/net/InetSocketAddress");
+
+        let method_id = env
+            .get_method_id(&class, "getAddress", "()Ljava/lang/Object;")
+            .expect("Failed to get method ID for InetSocketAddress.getAddress()");
+        let return_type = JavaType::Object("java/lang/Object".to_owned());
+
+        let ip_addr = env
+            .call_method_unchecked(source, method_id, return_type, &[])
+            .expect("Failed to call InetSocketAddress.getAddress()")
+            .l()
+            .expect("Call to InetSocketAddress.getAddress() did not return an object");
+
+        let method_id = env
+            .get_method_id(&class, "getPort", "()I")
+            .expect("Failed to get method ID for InetSocketAddress.getPort()");
+        let return_type = JavaType::Primitive(Primitive::Int);
+
+        let port = env
+            .call_method_unchecked(source, method_id, return_type, &[])
+            .expect("Failed to call InetSocketAddress.getPort()")
+            .i()
+            .expect("Call to InetSocketAddress.getPort() did not return an int");
+
+        SocketAddr::new(
+            IpAddr::from_java(env, ip_addr),
+            u16::try_from(port).expect("invalid port"),
+        )
     }
 }
