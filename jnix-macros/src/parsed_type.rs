@@ -58,7 +58,7 @@ impl ParsedType {
 
                 fn from_java(
                     env: &jnix::JnixEnv<'env>,
-                    source: jnix::jni::objects::JObject<'sub_env>,
+                    _source_: jnix::jni::objects::JObject<'sub_env>,
                 ) -> Self {
                     #body
                 }
