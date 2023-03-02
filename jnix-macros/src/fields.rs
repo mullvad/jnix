@@ -27,7 +27,7 @@ impl ParsedField {
         unnamed_field_index: Option<u32>,
     ) -> Self {
         let attributes = JnixAttributes::new(&field.attrs);
-        let source_binding = Ident::new(&format!("_source_{}", name), span);
+        let source_binding = Ident::new(&format!("jnix_source_object{}", name), span);
         let skip = attributes.has_flag("skip");
 
         ParsedField {
@@ -77,7 +77,7 @@ impl ParsedField {
     }
 
     pub fn preconversion(&self) -> TokenStream {
-        let _source_ = &self.source_binding;
+        let jnix_source_object = &self.source_binding;
 
         match self.attributes.get_value("map") {
             Some(closure_string_literal) => {
@@ -86,9 +86,9 @@ impl ParsedField {
 
                 self.prepare_map_closure(&mut closure);
 
-                quote! { (#closure)(#_source_) }
+                quote! { (#closure)(#jnix_source_object) }
             }
-            None => quote! { #_source_ },
+            None => quote! { #jnix_source_object },
         }
     }
 
@@ -316,7 +316,7 @@ impl ParsedFields {
                         panic!("Invalid JNI signature: {}", jni_signature);
                     });
 
-                    let java_value = env.call_method_unchecked(_source_, method_id, return_type, &[])
+                    let java_value = env.call_method_unchecked(jnix_source_object, method_id, return_type, &[])
                         .expect(concat!("Failed to call ", #class_name, "::", #getter));
 
                     <#field_type as jnix::FromJava<_>>::from_java(env, java_value)
