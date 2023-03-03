@@ -148,7 +148,7 @@ impl ParsedVariants {
                 match candidate {
                     jnix::jni::objects::JValue::Object(candidate) => {
                         let found = env
-                            .is_same_object(source, candidate)
+                            .is_same_object(jnix_source_object, candidate)
                             .expect(concat!(
                                 "Failed to compare object to enum class entry of ",
                                 #variant_class_name,
@@ -215,7 +215,7 @@ impl ParsedVariants {
 
             quote! {
                 let candidate = env.get_class(#variant_jni_class_name_literal);
-                let found = env.is_instance_of(source, &candidate)
+                let found = env.is_instance_of(jnix_source_object, &candidate)
                     .expect(concat!(
                         "Failed to check if object is an instance of class ",
                         #variant_class_name_literal,
