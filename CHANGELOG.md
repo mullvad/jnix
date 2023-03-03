@@ -21,6 +21,8 @@ Line wrap the file at 100 characters. That is over here: -----------------------
 - **Security**: in case of vulnerabilities.
 
 ## [Unreleased]
+### Fixed
+- Fix `FromJava` derivation not working when a field is named "source".
 
 ## [0.5.0] - 2022-09-14
 ### Fixed
