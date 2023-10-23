@@ -6,6 +6,8 @@ use jni::{
     signature::{JavaType, Primitive},
     sys::{jboolean, jint, JNI_FALSE},
 };
+use std::collections::HashSet;
+use std::iter::FromIterator;
 
 impl<'env, 'sub_env, T> FromJava<'env, JValue<'sub_env>> for T
 where
@@ -207,5 +209,24 @@ where
         }
 
         target
+    }
+}
+
+impl<'env, 'sub_env, T : Eq + std::hash::Hash> FromJava<'env, JObject<'sub_env>> for HashSet<T>
+where
+    'env: 'sub_env,
+    T: FromJava<'env, JObject<'sub_env>>,
+{
+    const JNI_SIGNATURE: &'static str = "Ljava/util/HashSet;";
+
+    fn from_java(env: &JnixEnv<'env>, source: JObject<'sub_env>) -> Self {
+        let class = env.get_class("java/util/ArrayList");
+
+        let list_object = env
+            .new_object(&class, "(Ljava/util/Collection;)V", &[JValue::from(source)])
+            .expect("Failed to create ArrayList object from HashSet");
+
+        let vector = Vec::from_java(&env, list_object);
+        HashSet::from_iter(vector)
     }
 }

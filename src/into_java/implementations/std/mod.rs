@@ -5,6 +5,8 @@ use jni::{
     objects::{AutoLocal, JList, JObject, JValue},
     sys::{jboolean, jdouble, jint, jlong, jshort, jsize, JNI_FALSE, JNI_TRUE},
 };
+use std::collections::HashSet;
+use std::iter::FromIterator;
 
 impl<'borrow, 'env: 'borrow> IntoJava<'borrow, 'env> for bool {
     const JNI_SIGNATURE: &'static str = "Z";
@@ -211,5 +213,27 @@ impl<'borrow, 'env: 'borrow> IntoJava<'borrow, 'env> for String {
         let jstring = env.new_string(&self).expect("Failed to create Java String");
 
         env.auto_local(jstring)
+    }
+}
+
+impl<'borrow, 'env, T> IntoJava<'borrow, 'env> for HashSet<T>
+where
+    'env: 'borrow,
+    T: IntoJava<'borrow, 'env, JavaType = AutoLocal<'env, 'borrow>>,
+{
+    const JNI_SIGNATURE: &'static str = "Ljava/util/HashSet;";
+
+    type JavaType = AutoLocal<'env, 'borrow>;
+
+    fn into_java(self, env: &'borrow JnixEnv<'env>) -> Self::JavaType {
+        let vector = Vec::from_iter(self);
+        let list_object = vector.into_java(&env);
+
+        let hash_class = env.get_class("java/util/HashSet");
+        let hash_object = env
+            .new_object(&hash_class, "(Ljava/util/Collection;)V", &[JValue::from(&list_object)])
+            .expect("Failed to create HashSet object");
+
+        env.auto_local(hash_object)
     }
 }
