@@ -24,6 +24,10 @@ Line wrap the file at 100 characters. That is over here: -----------------------
 ### Fixed
 - Fix `FromJava` derivation not working when a field is named "source".
 
+### Added
+- Implement `FromJava` for `HashSet<T>`.
+- Implement `IntoJava` for `HashSet<T>`.
+
 ## [0.5.0] - 2022-09-14
 ### Fixed
 - Fix broken derivation of `FromJava` for enums with only unit variants.
