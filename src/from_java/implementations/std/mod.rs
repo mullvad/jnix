@@ -4,7 +4,7 @@ use crate::{FromJava, JnixEnv};
 use jni::{
     objects::{AutoLocal, JObject, JString, JValue},
     signature::{JavaType, Primitive},
-    sys::{jboolean, jint, JNI_FALSE},
+    sys::{jboolean, jint, jshort, JNI_FALSE},
 };
 use std::collections::HashSet;
 use std::iter::FromIterator;
@@ -80,6 +80,28 @@ where
         match source {
             JValue::Int(integer) => i32::from_java(env, integer),
             _ => panic!("Can't convert Java type, expected an integer primitive"),
+        }
+    }
+}
+
+impl<'env> FromJava<'env, jshort> for i16 {
+    const JNI_SIGNATURE: &'static str = "S";
+
+    fn from_java(_: &JnixEnv<'env>, source: jshort) -> Self {
+        source as i16
+    }
+}
+
+impl<'env, 'sub_env> FromJava<'env, JValue<'sub_env>> for i16
+where
+    'env: 'sub_env,
+{
+    const JNI_SIGNATURE: &'static str = "S";
+
+    fn from_java(env: &JnixEnv<'env>, source: JValue<'sub_env>) -> Self {
+        match source {
+            JValue::Short(short) => i16::from_java(env, short),
+            _ => panic!("Can't convert Java type, expected a short primitive"),
         }
     }
 }
@@ -212,7 +234,7 @@ where
     }
 }
 
-impl<'env, 'sub_env, T : Eq + std::hash::Hash> FromJava<'env, JObject<'sub_env>> for HashSet<T>
+impl<'env, 'sub_env, T: Eq + std::hash::Hash> FromJava<'env, JObject<'sub_env>> for HashSet<T>
 where
     'env: 'sub_env,
     T: FromJava<'env, JObject<'sub_env>>,
