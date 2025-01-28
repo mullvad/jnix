@@ -4,7 +4,7 @@ use crate::{FromJava, JnixEnv};
 use jni::{
     objects::{AutoLocal, JObject, JString, JValue},
     signature::{JavaType, Primitive},
-    sys::{jboolean, jint, jshort, JNI_FALSE},
+    sys::{jboolean, jint, jlong, jshort, JNI_FALSE},
 };
 use std::collections::HashSet;
 use std::iter::FromIterator;
@@ -58,6 +58,28 @@ where
         match source {
             JValue::Bool(boolean) => bool::from_java(env, boolean),
             _ => panic!("Can't convert Java type, expected a boolean primitive"),
+        }
+    }
+}
+
+impl<'env> FromJava<'env, jlong> for i64 {
+    const JNI_SIGNATURE: &'static str = "J";
+
+    fn from_java(_: &JnixEnv<'env>, source: jlong) -> Self {
+        source as i64
+    }
+}
+
+impl<'env, 'sub_env> FromJava<'env, JValue<'sub_env>> for i64
+where
+    'env: 'sub_env,
+{
+    const JNI_SIGNATURE: &'static str = "J";
+
+    fn from_java(env: &JnixEnv<'env>, source: JValue<'sub_env>) -> Self {
+        match source {
+            JValue::Long(long) => i64::from_java(env, long),
+            _ => panic!("Can't convert Java type, expected a long primitive"),
         }
     }
 }
