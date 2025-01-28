@@ -179,7 +179,7 @@ where
     'env: 'borrow,
     T: IntoJava<'borrow, 'env, JavaType = AutoLocal<'env, 'borrow>>,
 {
-    const JNI_SIGNATURE: &'static str = "Ljava/util/ArrayList;";
+    const JNI_SIGNATURE: &'static str = "Lkotlin/collections/List;";
 
     type JavaType = AutoLocal<'env, 'borrow>;
 
@@ -231,7 +231,11 @@ where
 
         let hash_class = env.get_class("java/util/HashSet");
         let hash_object = env
-            .new_object(&hash_class, "(Ljava/util/Collection;)V", &[JValue::from(&list_object)])
+            .new_object(
+                &hash_class,
+                "(Ljava/util/Collection;)V",
+                &[JValue::from(&list_object)],
+            )
             .expect("Failed to create HashSet object");
 
         env.auto_local(hash_object)
