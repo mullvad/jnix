@@ -21,6 +21,13 @@ Line wrap the file at 100 characters. That is over here: -----------------------
 - **Security**: in case of vulnerabilities.
 
 ## [Unreleased]
+### Added
+- Implement `FromJava` for `HashMap<K, V>`.
+
+## [0.5.2] - 2025-01-30
+### Added
+- Implement `FromJava` for `i64`.
+- Implement `FromJava` for `i16`.
 
 ## [0.5.1] - 2023-10-24
 ### Fixed
