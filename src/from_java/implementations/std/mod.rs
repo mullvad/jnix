@@ -6,7 +6,7 @@ use jni::{
     signature::{JavaType, Primitive},
     sys::{jboolean, jint, jlong, jshort, JNI_FALSE},
 };
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::iter::FromIterator;
 
 impl<'env, 'sub_env, T> FromJava<'env, JValue<'sub_env>> for T
@@ -272,5 +272,66 @@ where
 
         let vector = Vec::from_java(&env, list_object);
         HashSet::from_iter(vector)
+    }
+}
+
+impl<'env, 'sub_env, K, V> FromJava<'env, JObject<'sub_env>> for HashMap<K, V>
+where
+    'env: 'sub_env,
+    K: FromJava<'env, JObject<'sub_env>> + Eq + std::hash::Hash,
+    V: FromJava<'env, JObject<'sub_env>>,
+{
+    const JNI_SIGNATURE: &'static str = "Ljava/util/Map;";
+
+    fn from_java(env: &JnixEnv<'env>, source: JObject<'sub_env>) -> Self {
+        let entry_set = env
+            .call_method(source, "entrySet", "()Ljava/util/Set;", &[])
+            .expect("Failed to call Map.entrySet()")
+            .l()
+            .expect("Entry set should be an object");
+
+        let iterator = env
+            .call_method(entry_set, "iterator", "()Ljava/util/Iterator;", &[])
+            .expect("Failed to get iterator")
+            .l()
+            .expect("Iterator should be an object");
+
+        let mut map = HashMap::new();
+
+        loop {
+            let has_next = env
+                .call_method(iterator, "hasNext", "()Z", &[])
+                .expect("Failed to call hasNext()")
+                .z()
+                .expect("hasNext should return boolean");
+
+            if !has_next {
+                break;
+            }
+
+            let entry = env
+                .call_method(iterator, "next", "()Ljava/lang/Object;", &[])
+                .expect("Failed to call next()")
+                .l()
+                .expect("next() should return Map.Entry");
+
+            let key = env
+                .call_method(entry, "getKey", "()Ljava/lang/Object;", &[])
+                .expect("Failed to call getKey()")
+                .l()
+                .expect("Key should be object");
+
+            let value = env
+                .call_method(entry, "getValue", "()Ljava/lang/Object;", &[])
+                .expect("Failed to call getValue()")
+                .l()
+                .expect("Value should be object");
+
+            let rust_key = K::from_java(env, key);
+            let rust_value = V::from_java(env, value);
+
+            map.insert(rust_key, rust_value);
+        }
+        map
     }
 }
